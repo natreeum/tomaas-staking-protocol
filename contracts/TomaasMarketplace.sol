@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "./TomaasNFT.sol";
+import "./TomaasRWN.sol";
 import "./TomaasProtocol.sol";
 
 contract TomaasMarketplace is ReentrancyGuard, Ownable, Pausable {

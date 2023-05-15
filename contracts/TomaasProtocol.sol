@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-import "./TomaasNFT.sol";
+import "./TomaasRWN.sol";
 
 // import "hardhat/console.sol";
 
@@ -17,7 +17,7 @@ import "./TomaasNFT.sol";
  * owner, create collection, mint NFT
  * holder, owner of NFT and receive earnings from renter per monthly
  * renter, rent NFT from holder and pay earnings to holder per monthly
- * @title rental place for TomaasNFT
+ * @title rental place for TomaasRWN
  * @author tomaas labs 
  * @notice 
  */

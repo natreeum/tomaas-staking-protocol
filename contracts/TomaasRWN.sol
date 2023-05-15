@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: BSL-1.0
 pragma solidity ^0.8.17;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "./IERC4907.sol";
 
 // Uncomment this line to use console.log
@@ -17,20 +19,23 @@ import "hardhat/console.sol";
  * contract provides a comprehensive implementation of an NFT rental protocol, 
  * with functions for managing user and expiry timestamps, 
  * collecting rental fees, and distributing earnings to NFT owners.
- * @title TomaasNFT
- * @dev Implementation of the TomaasNFT
+ * @title TomaasRWN
+ * @dev Implementation of the TomaasRWN
+ * @custom:security-contact security@tomaas.ai
  */
-contract TomaasNFT is
-    ERC721,
-    ERC721URIStorage,
+contract TomaasRWN is
+    Initializable, 
+    ERC721Upgradeable, 
+    ERC721EnumerableUpgradeable, 
+    ERC721URIStorageUpgradeable, 
+    PausableUpgradeable, 
+    OwnableUpgradeable 
     ReentrancyGuard,
-    Pausable,
-    Ownable,
     IERC4907
 {
-    using Counters for Counters.Counter;
+    using CountersUpgradeable for CountersUpgradeable.Counter;
 
-    Counters.Counter private _tokenIdCounter;
+    CountersUpgradeable.Counter private _tokenIdCounter;
 
     struct UserInfo {
         address user; // address of user role
@@ -39,7 +44,7 @@ contract TomaasNFT is
 
     mapping(uint256 => UserInfo) internal _users;
 
-    IERC20 private _acceptedToken;
+    IERC20Upgradeable private _acceptedToken;
 
     uint256 feeRate = 100; // 1% fee, 100% = 10000
 
@@ -47,8 +52,18 @@ contract TomaasNFT is
     mapping(uint256 => uint256) internal _unclaimedEarnings;
     uint256 internal _totalDistributedEarnings;
 
-    constructor(string memory _name, address acceptedToken) ERC721(_name, "TMN") {
-        _acceptedToken = IERC20(acceptedToken);
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(address acceptedToken) {
+        _acceptedToken = IERC20Upgradeable(acceptedToken);
+        _disableInitializers();
+    }
+
+    function initialize() initializer public {
+        __ERC721_init("Tomaas Real-world Asset NFT", "TRN");
+        __ERC721Enumerable_init();
+        __ERC721URIStorage_init();
+        __Pausable_init();
+        __Ownable_init();
     }
 
     function pause() public onlyOwner {
@@ -74,7 +89,7 @@ contract TomaasNFT is
         address to,
         uint256 tokenId,
         uint256 batchSize
-    ) internal override(ERC721) whenNotPaused {
+    ) internal override(ERC721Upgradeable) whenNotPaused {
         super._beforeTokenTransfer(from, to, tokenId, batchSize);
 
         // keep user after transfer
@@ -86,21 +101,21 @@ contract TomaasNFT is
 
     function _burn(
         uint256 tokenId
-    ) internal override(ERC721, ERC721URIStorage) {
+    ) internal override(ERC721Upgradeable, ERC721URIStorageUpgradeable) {
         super._burn(tokenId);
     }
 
     function tokenURI(
         uint256 tokenId
-    ) public view override(ERC721, ERC721URIStorage) returns (string memory) {
-        require(_exists(tokenId), "TN: tokenDoesNotExi");
+    ) public view override(ERC721Upgradeable, ERC721URIStorageUpgradeable) returns (string memory) {
+        require(_exists(tokenId), "RWN: tokenDoesNotExi");
         return super.tokenURI(tokenId);
     }
 
     /// @dev See {IERC165-supportsInterface}.
     function supportsInterface(
         bytes4 interfaceId
-    ) public view virtual override(ERC721) returns (bool) {
+    ) public view virtual override(ERC721Upgradeable, ERC721EnumerableUpgradeable) returns (bool) {
         return
             interfaceId == type(IERC4907).interfaceId ||
             super.supportsInterface(interfaceId);
@@ -116,8 +131,8 @@ contract TomaasNFT is
         address user,
         uint64 expires
     ) external override {
-        require(_exists(tokenId), "TN: tokenDoesNotExi");
-        require(_isApprovedOrOwner(msg.sender, tokenId), "TN: notOwnerOrAppr");
+        require(_exists(tokenId), "RWN: tokenDoesNotExi");
+        require(_isApprovedOrOwner(msg.sender, tokenId), "RWN: notOwnerOrAppr");
 
         UserInfo storage info =  _users[tokenId];
         info.user = user;
@@ -134,7 +149,7 @@ contract TomaasNFT is
     function userOf(
         uint256 tokenId
     ) external view override returns (address) {
-        require(_exists(tokenId), "TN: tokenDoesNotExi");
+        require(_exists(tokenId), "RWN: tokenDoesNotExi");
 
         // console.log("tokenId %s expires is %o and block timestamp is %o", tokenId, _users[tokenId].expires, block.timestamp);
 
@@ -154,7 +169,7 @@ contract TomaasNFT is
     function userExpires(
         uint256 tokenId
     ) external view override returns (uint256) {        
-        require(_exists(tokenId), "TN: tokenDoesNotExi");
+        require(_exists(tokenId), "RWN: tokenDoesNotExi");
         return _users[tokenId].expires;
     }
 
@@ -190,39 +205,39 @@ contract TomaasNFT is
 
     function payOutEarningsAllRented(uint256 amount) external nonReentrant {
         IERC20 token = IERC20(_acceptedToken);
-        require(token.balanceOf(msg.sender) >= amount, "TN: notEnoughBalance");
-        require(token.transferFrom(msg.sender, address(this), amount), "TN: transferFailed");
+        require(token.balanceOf(msg.sender) >= amount, "RWN: notEnoughBalance");
+        require(token.transferFrom(msg.sender, address(this), amount), "RWN: transferFailed");
 
         _distributeEarning(msg.sender, amount);
         _totalDistributedEarnings += amount;
     }
 
     function payOutEarnings(uint256 tokenId, uint256 amount) external nonReentrant {
-        require(_exists(tokenId), "TN: tokenDoesNotExi");
-        require(_users[tokenId].user == msg.sender, "TN: senderIsNotUser");
+        require(_exists(tokenId), "RWN: tokenDoesNotExi");
+        require(_users[tokenId].user == msg.sender, "RWN: senderIsNotUser");
 
         IERC20 token = IERC20(_acceptedToken);
-        require(token.balanceOf(msg.sender) >= amount, "TN: notEnoughBalance");
-        require(token.transferFrom(msg.sender, address(this), amount), "TN: transferFailed");
+        require(token.balanceOf(msg.sender) >= amount, "RWN: notEnoughBalance");
+        require(token.transferFrom(msg.sender, address(this), amount), "RWN: transferFailed");
 
         _unclaimedEarnings[tokenId] += amount;
         _totalDistributedEarnings += amount;
     }
 
     function claimEarnings(uint256 tokenId) external nonReentrant {
-        require(_exists(tokenId), "TN: tokenDoesNotExi");
-        require(ownerOf(tokenId) == msg.sender, "TN: notOwner");
+        require(_exists(tokenId), "RWN: tokenDoesNotExi");
+        require(ownerOf(tokenId) == msg.sender, "RWN: notOwner");
 
         uint256 amount = _unclaimedEarnings[tokenId];
-        require(amount > 0, "TN: noEarningsToClaim");
+        require(amount > 0, "RWN: noEarningsToClaim");
 
         uint256 fee = amount * feeRate / 10000;
         uint256 amountToUser = amount - fee;
 
         IERC20 token = IERC20(_acceptedToken);
-        require(token.balanceOf(address(this)) >= amount, "TN: notEnoughBalance");
-        require(token.transfer(msg.sender, amountToUser), "TN: transferFailedToUser");
-        require(token.transfer(owner(), fee), "TN: transferFailedToProtocol");
+        require(token.balanceOf(address(this)) >= amount, "RWN: notEnoughBalance");
+        require(token.transfer(msg.sender, amountToUser), "RWN: transferFailedToUser");
+        require(token.transfer(owner(), fee), "RWN: transferFailedToProtocol");
 
         _unclaimedEarnings[tokenId] = 0;
     }
@@ -236,18 +251,18 @@ contract TomaasNFT is
             }
         }
 
-        require(amount > 0, "TN: noEarningsToClaim");
+        require(amount > 0, "RWN: noEarningsToClaim");
         uint256 fee = amount * feeRate / 10000;
         uint256 amountToUser = amount - fee;
 
         IERC20 token = IERC20(_acceptedToken);
-        require(token.balanceOf(address(this)) >= amount, "TN: notEnoughBalance");
-        require(token.transfer(msg.sender, amountToUser), "TN: transferFailedToUser");
-        require(token.transfer(owner(), fee), "TN: transferFailedToProtocol");
+        require(token.balanceOf(address(this)) >= amount, "RWN: notEnoughBalance");
+        require(token.transfer(msg.sender, amountToUser), "RWN: transferFailedToUser");
+        require(token.transfer(owner(), fee), "RWN: transferFailedToProtocol");
     }
 
     function unClaimedEarnings(uint256 tokenId) external view returns (uint256) {
-        require(_exists(tokenId), "TN: tokenDoesNotExi");
+        require(_exists(tokenId), "RWN: tokenDoesNotExi");
         return _unclaimedEarnings[tokenId];
     }
 
