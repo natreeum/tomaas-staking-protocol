@@ -30,7 +30,7 @@ describe("TomaasProtocol", function () {
         [owner, holder, renter, buyer, holder2, renter2, buyer2] = await ethers.getSigners();
     
         const ERC20 = await ethers.getContractFactory("ERC20Mock");
-        usdc = await ERC20.deploy("USD Coin", "USDC");
+        usdc = await upgrades.deployProxy(ERC20, ["USD Coin", "USDC"]);
         await usdc.deployed();
 
         await usdc.connect(owner).mint(owner.address, TWO_USDC.mul(1000000));
@@ -39,11 +39,11 @@ describe("TomaasProtocol", function () {
 
         // Deploy TomaasRWN
         const TomaasRWN = await ethers.getContractFactory("TomaasRWN");
-        tomaasRWN = await TomaasRWN.deploy(COLLECTION_NAME_1, usdc.address);
+        tomaasRWN = await upgrades.deployProxy(TomaasRWN, [COLLECTION_NAME_1, usdc.address]);
         await tomaasRWN.deployed();
 
         const TomaasProtocol = await ethers.getContractFactory("TomaasProtocol");
-        tomaasProtocol = await TomaasProtocol.deploy();
+        tomaasProtocol = await upgrades.deployProxy(TomaasProtocol);
         await tomaasProtocol.deployed();
 
         await tomaasRWN.connect(owner).transferOwnership(tomaasProtocol.address);
@@ -53,7 +53,8 @@ describe("TomaasProtocol", function () {
     describe("collection", function () {
         it("should add a new collection", async function () {
           // Test case code
-          const tomNFT2 = await (await ethers.getContractFactory("TomaasRWN")).deploy(COLLECTION_NAME_2, usdc.address);
+          const TomaasRWN = await ethers.getContractFactory("TomaasRWN");
+          const tomNFT2 = await upgrades.deployProxy(TomaasRWN, [COLLECTION_NAME_2, usdc.address]);
           await tomNFT2.deployed();
 
           const tx = await tomaasProtocol.addCollection(tomNFT2.address);
@@ -66,7 +67,7 @@ describe("TomaasProtocol", function () {
           expect(collection.acceptedToken).to.equal(usdc.address);
         });
         it("should revert if NFT address is zero", async function () {
-          await expect(tomaasProtocol.addCollection(ethers.constants.AddressZero)).to.be.revertedWith("TP: NFT Addr=0");
+          await expect(tomaasProtocol.addCollection(ethers.constants.AddressZero)).to.be.revertedWith("LP: NFT Addr=0");
         });
       });
 
@@ -74,7 +75,7 @@ describe("TomaasProtocol", function () {
         it("should revert if it is not approved", async function () {
           await tomaasProtocol.safeMintNFT(tomaasRWN.address, holder.address, NFT_URI);
           await expect(tomaasProtocol.connect(holder).listingNFT(
-            tomaasRWN.address, TOKEN_ID)).to.be.revertedWith("TP: notApproved");
+            tomaasRWN.address, TOKEN_ID)).to.be.revertedWith("LP: notApproved");
         });
         it("should allow listing of NFTs when approve is used", async function () {
           await tomaasProtocol.safeMintNFT(tomaasRWN.address, holder.address, NFT_URI);

@@ -1,19 +1,27 @@
 // SPDX-License-Identifier: BSL-1.0
 pragma solidity ^0.8.17;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+
 import "./TomaasRWN.sol";
 import "./TomaasProtocol.sol";
 
-contract TomaasMarketplace is ReentrancyGuard, Ownable, Pausable {
+contract TomaasMarketplace is 
+    Initializable,
+    ReentrancyGuardUpgradeable, 
+    OwnableUpgradeable, 
+    PausableUpgradeable 
+{
 
     // Add the library methods
-    using EnumerableSet for EnumerableSet.UintSet;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.UintSet;
 
-    uint8 public salesFee = 100; //1%
+    uint8 public salesFee;
     TomaasProtocol private tomaasProtocol;
 
     struct SaleInfo {
@@ -31,8 +39,16 @@ contract TomaasMarketplace is ReentrancyGuard, Ownable, Pausable {
     event NFTListedForSale(address indexed collection, uint256 tokenId, uint256 price);
     event NFTBought(address indexed collection, uint256 tokenId, uint256 price);
 
-    constructor(address _tomaasProtocol) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _tomaasProtocol) initializer public {
+        salesFee = 100; //1%
         tomaasProtocol = TomaasProtocol(_tomaasProtocol);
+        __Pausable_init();
+        __Ownable_init();
     }
 
     function pause() public onlyOwner {
@@ -87,7 +103,7 @@ contract TomaasMarketplace is ReentrancyGuard, Ownable, Pausable {
     }
 
     /**
-     * @param nftAddress address of TomaasNFT
+     * @param nftAddress address of TomaasRWN
      * @return saleInfos all NFTs for sale in collection
      */
     function _getListForSale(address nftAddress) internal view returns (SaleInfo[] memory) {
@@ -100,8 +116,8 @@ contract TomaasMarketplace is ReentrancyGuard, Ownable, Pausable {
     }
 
     /**
-     * The ERC20 token's address must be the same as the acceptedToken in the TomaasNFT contract. 
-     * @dev Frontend should obtain the applied token address from the TomaasNFT contract. 
+     * The ERC20 token's address must be the same as the acceptedToken in the TomaasRWN contract. 
+     * @dev Frontend should obtain the applied token address from the TomaasRWN contract. 
      * @param nftAddress  address of NFT
      * @param tokenId tokenId of NFT 
      * @param price price of NFT  
@@ -110,10 +126,10 @@ contract TomaasMarketplace is ReentrancyGuard, Ownable, Pausable {
         require(price > 0, "TM: nftAddress is the zero address or price is zero");
 
         TomaasProtocol.CollectionInfo memory collectionInfo = tomaasProtocol.getCollectionInfo(nftAddress);
-        TomaasNFT tomaasNFT = collectionInfo.tomaasNFT;
-        require(tomaasNFT.ownerOf(tokenId) == msg.sender, "TM: you are not the owner of this NFT");
+        TomaasRWN tomaasRWN = collectionInfo.tomaasRWN;
+        require(tomaasRWN.ownerOf(tokenId) == msg.sender, "TM: you are not the owner of this NFT");
 
-        require(tomaasNFT.unClaimedEarnings(tokenId) == 0, "TM: you have rest of yield");
+        require(tomaasRWN.unClaimedEarnings(tokenId) == 0, "TM: you have rest of yield");
 
         _addListForSale(nftAddress, tokenId, msg.sender, price);
         emit NFTListedForSale(nftAddress, tokenId, price);
@@ -122,8 +138,8 @@ contract TomaasMarketplace is ReentrancyGuard, Ownable, Pausable {
     function isForSale(address nftAddress, uint256 tokenId) external view returns (bool) {
         require(listForSale[nftAddress][tokenId].price != 0, "TM: there isnot this NFT for sale");
 
-        TomaasNFT tomaasNFT = TomaasNFT(nftAddress);
-        require(listForSale[nftAddress][tokenId].seller == tomaasNFT.ownerOf(tokenId), "TM: seller is not the owner of this NFT");
+        TomaasRWN tomaasRWN = TomaasRWN(nftAddress);
+        require(listForSale[nftAddress][tokenId].seller == tomaasRWN.ownerOf(tokenId), "TM: seller is not the owner of this NFT");
         require(listForSale[nftAddress][tokenId].isAvailable, "TM: NFT is not for sale");
         return true;
     }
@@ -137,22 +153,22 @@ contract TomaasMarketplace is ReentrancyGuard, Ownable, Pausable {
 
     /**
      * 
-     * @param nftAddress  address of TomaasNFT
-     * @param tokenId tokenId of TomaasNFT 
-     * @param price price of TomaasNFT 
+     * @param nftAddress  address of TomaasRWN
+     * @param tokenId tokenId of TomaasRWN 
+     * @param price price of TomaasRWN 
      */
     function buyNFT(address nftAddress, uint256 tokenId, uint256 price) external nonReentrant {
         require(price > 0, "TM: price is zero");
 
         TomaasProtocol.CollectionInfo memory collectionInfo = tomaasProtocol.getCollectionInfo(nftAddress);
-        TomaasNFT tomaasNFT = TomaasNFT(nftAddress);
-        require(listForSale[nftAddress][tokenId].seller == tomaasNFT.ownerOf(tokenId), "TM: seller is not the owner of this NFT");
+        TomaasRWN tomaasRWN = TomaasRWN(nftAddress);
+        require(listForSale[nftAddress][tokenId].seller == tomaasRWN.ownerOf(tokenId), "TM: seller is not the owner of this NFT");
         require(listForSale[nftAddress][tokenId].isAvailable, "TM: NFT is not for sale");
         require(listForSale[nftAddress][tokenId].price == price, "TM: price is not correct");
 
         uint256 priceToken = price * 10 ** 6;
 
-        IERC20 token = collectionInfo.acceptedToken; //it's from TomaasNFT's acceptedToken
+        IERC20Upgradeable token = collectionInfo.acceptedToken; //it's from TomaasRWN's acceptedToken
         require(token.balanceOf(msg.sender) >= priceToken, "TM: not enough token balance");
 
         uint256 fee = priceToken / (salesFee / 100000);
@@ -160,7 +176,7 @@ contract TomaasMarketplace is ReentrancyGuard, Ownable, Pausable {
         require(token.transferFrom(msg.sender, listForSale[nftAddress][tokenId].seller, profit), "TM: failed to transfer token rent to contract");
         require(token.transfer(owner(), fee), "TM: failed to transfer token rent to owner");
 
-        tomaasNFT.safeTransferFrom(listForSale[nftAddress][tokenId].seller, msg.sender, tokenId);
+        tomaasRWN.safeTransferFrom(listForSale[nftAddress][tokenId].seller, msg.sender, tokenId);
 
         listForSale[nftAddress][tokenId].seller = address(0);
         listForSale[nftAddress][tokenId].price = 0;
@@ -170,7 +186,7 @@ contract TomaasMarketplace is ReentrancyGuard, Ownable, Pausable {
 
     /**
      * 
-     * @param nftAddress address of TomaasNFT
+     * @param nftAddress address of TomaasRWN
      * @return saleInfos all NFTs for sale in collection
      */
     function getListedNFTs(address nftAddress) public view returns (SaleInfo[] memory) {

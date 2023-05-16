@@ -18,13 +18,13 @@ describe("TomaasRWN", function () {
     const TOKEN_ID = 0;
     const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
     const TOKEN_NAME = "Trustless Ondemand Mobility Vehicle Ownership pre #1";
-    const TOKEN_SYMBOL = "RWN";
+    const TOKEN_SYMBOL = "TRN";
 
     beforeEach(async function () {
         [owner, holder, renter, buyer, holder2, renter2, buyer2] = await ethers.getSigners();
     
         const ERC20 = await ethers.getContractFactory("ERC20Mock");
-        usdc = await ERC20.deploy("USD Coin", "USDC");
+        usdc = await upgrades.deployProxy(ERC20, ["USD Coin", "USDC"]);
         await usdc.deployed();
 
         await usdc.connect(owner).mint(owner.address, TWO_USDC.mul(1000000));
@@ -32,7 +32,7 @@ describe("TomaasRWN", function () {
         await usdc.connect(owner).mint(renter.address, TWO_USDC.mul(1000000));
 
         TomaasRWN = await ethers.getContractFactory("TomaasRWN");
-        tomaasRWN = await TomaasRWN.deploy(TOKEN_NAME, usdc.address);
+        tomaasRWN = await upgrades.deployProxy(TomaasRWN, [TOKEN_NAME, usdc.address]);
         await tomaasRWN.deployed();
     });
 
@@ -73,14 +73,14 @@ describe("TomaasRWN", function () {
             const expires = Math.floor(Date.now() / 1000) + 3600;
             await expect(tomaasRWN.connect(renter).setUser(
                 TOKEN_ID, renter.address, expires)).to.be.revertedWith(
-                    "TN: notOwnerOrAppr");
+                    "RWN: notOwnerOrAppr");
         });
 
         it("should revert if the token does not exist", async function () {
             const expires = Math.floor(Date.now() / 1000) + 3600;
             await expect(tomaasRWN.connect(owner).setUser(
                 TOKEN_ID, renter.address, expires)).to.be.revertedWith(
-                    "TN: tokenDoesNotExi");
+                    "RWN: tokenDoesNotExi");
         });
 
         it("should handle multiple NFTs with different users and expiries", async function () {

@@ -5,8 +5,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
@@ -26,11 +25,10 @@ import "hardhat/console.sol";
 contract TomaasRWN is
     Initializable, 
     ERC721Upgradeable, 
-    ERC721EnumerableUpgradeable, 
     ERC721URIStorageUpgradeable, 
     PausableUpgradeable, 
-    OwnableUpgradeable 
-    ReentrancyGuard,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
     IERC4907
 {
     using CountersUpgradeable for CountersUpgradeable.Counter;
@@ -46,21 +44,21 @@ contract TomaasRWN is
 
     IERC20Upgradeable private _acceptedToken;
 
-    uint256 feeRate = 100; // 1% fee, 100% = 10000
+    uint256 feeRate;
 
     //token id => earnings
     mapping(uint256 => uint256) internal _unclaimedEarnings;
     uint256 internal _totalDistributedEarnings;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address acceptedToken) {
-        _acceptedToken = IERC20Upgradeable(acceptedToken);
+    constructor() {
         _disableInitializers();
     }
 
-    function initialize() initializer public {
-        __ERC721_init("Tomaas Real-world Asset NFT", "TRN");
-        __ERC721Enumerable_init();
+    function initialize(string memory _name, address acceptedToken) initializer public {
+        feeRate = 100; // 1% fee, 100% = 10000
+        _acceptedToken = IERC20Upgradeable(acceptedToken);
+        __ERC721_init(_name, "TRN");
         __ERC721URIStorage_init();
         __Pausable_init();
         __Ownable_init();
@@ -115,7 +113,7 @@ contract TomaasRWN is
     /// @dev See {IERC165-supportsInterface}.
     function supportsInterface(
         bytes4 interfaceId
-    ) public view virtual override(ERC721Upgradeable, ERC721EnumerableUpgradeable) returns (bool) {
+    ) public view virtual override(ERC721Upgradeable) returns (bool) {
         return
             interfaceId == type(IERC4907).interfaceId ||
             super.supportsInterface(interfaceId);
@@ -204,7 +202,7 @@ contract TomaasRWN is
     }
 
     function payOutEarningsAllRented(uint256 amount) external nonReentrant {
-        IERC20 token = IERC20(_acceptedToken);
+        IERC20Upgradeable token = IERC20Upgradeable(_acceptedToken);
         require(token.balanceOf(msg.sender) >= amount, "RWN: notEnoughBalance");
         require(token.transferFrom(msg.sender, address(this), amount), "RWN: transferFailed");
 
@@ -216,7 +214,7 @@ contract TomaasRWN is
         require(_exists(tokenId), "RWN: tokenDoesNotExi");
         require(_users[tokenId].user == msg.sender, "RWN: senderIsNotUser");
 
-        IERC20 token = IERC20(_acceptedToken);
+        IERC20Upgradeable token = IERC20Upgradeable(_acceptedToken);
         require(token.balanceOf(msg.sender) >= amount, "RWN: notEnoughBalance");
         require(token.transferFrom(msg.sender, address(this), amount), "RWN: transferFailed");
 
@@ -234,7 +232,7 @@ contract TomaasRWN is
         uint256 fee = amount * feeRate / 10000;
         uint256 amountToUser = amount - fee;
 
-        IERC20 token = IERC20(_acceptedToken);
+        IERC20Upgradeable token = IERC20Upgradeable(_acceptedToken);
         require(token.balanceOf(address(this)) >= amount, "RWN: notEnoughBalance");
         require(token.transfer(msg.sender, amountToUser), "RWN: transferFailedToUser");
         require(token.transfer(owner(), fee), "RWN: transferFailedToProtocol");
@@ -255,7 +253,7 @@ contract TomaasRWN is
         uint256 fee = amount * feeRate / 10000;
         uint256 amountToUser = amount - fee;
 
-        IERC20 token = IERC20(_acceptedToken);
+        IERC20Upgradeable token = IERC20Upgradeable(_acceptedToken);
         require(token.balanceOf(address(this)) >= amount, "RWN: notEnoughBalance");
         require(token.transfer(msg.sender, amountToUser), "RWN: transferFailedToUser");
         require(token.transfer(owner(), fee), "RWN: transferFailedToProtocol");

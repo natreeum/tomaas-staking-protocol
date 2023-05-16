@@ -28,7 +28,7 @@ describe("TomaasMarketplace", function () {
     [owner, holder, renter, buyer, holder2, renter2, buyer2] = await ethers.getSigners();
 
     const ERC20 = await ethers.getContractFactory("ERC20Mock");
-    usdc = await ERC20.deploy("USD Coin", "USDC");
+    usdc = await upgrades.deployProxy(ERC20, ["USD Coin", "USDC"]); 
     await usdc.deployed();
 
     await usdc.connect(owner).mint(owner.address, TWO_USDC.mul(1000000));
@@ -37,11 +37,11 @@ describe("TomaasMarketplace", function () {
 
     // Deploy TomaasRWN
     const TomaasRWN = await ethers.getContractFactory("TomaasRWN");
-    tomaasRWN = await TomaasRWN.deploy(COLLECTION_NAME_1, usdc.address);
+    tomaasRWN = await upgrades.deployProxy(TomaasRWN, [COLLECTION_NAME_1, usdc.address]); 
     await tomaasRWN.deployed();
 
     const TomaasProtocol = await ethers.getContractFactory("TomaasProtocol");
-    tomaasProtocol = await TomaasProtocol.deploy();
+    tomaasProtocol = await upgrades.deployProxy(TomaasProtocol); 
     await tomaasProtocol.deployed();
 
     await tomaasRWN.connect(owner).transferOwnership(tomaasProtocol.address);
@@ -49,7 +49,7 @@ describe("TomaasMarketplace", function () {
 
     // Deploy the TomaasMarketplace contract
     const TomaasMarketplace = await ethers.getContractFactory("TomaasMarketplace");
-    tomaasMarketplace = await TomaasMarketplace.deploy(tomaasProtocol.address);
+    tomaasMarketplace = await upgrades.deployProxy(TomaasMarketplace, [tomaasProtocol.address]);
     await tomaasMarketplace.deployed();
 
     await tomaasProtocol.safeMintNFT(tomaasRWN.address, holder.address, NFT_URI);

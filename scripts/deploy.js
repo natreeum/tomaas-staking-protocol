@@ -31,12 +31,12 @@ async function main() {
   const COLLECTION_NAME_1 = "TomaasRWN #1";
 
   const TomaasRWN = await hre.ethers.getContractFactory("TomaasRWN");
-  const tomaasRWN = await TomaasRWN.deploy(COLLECTION_NAME_1, process.env.USDC_ETH_ADDRESS);
+  const tomaasRWN = await upgrades.deployProxy(TomaasRWN, [COLLECTION_NAME_1, process.env.USDC_ETH_ADDRESS]);
   await tomaasRWN.deployed();
   console.log("TomaasRWN address:", tomaasRWN.address);
 
   const TomaasProtocol = await hre.ethers.getContractFactory("TomaasProtocol");
-  const tomaasProtocol = await TomaasProtocol.deploy();
+  const tomaasProtocol = await upgrades.deployProxy(TomaasProtocol);
   await tomaasProtocol.deployed();
   console.log("TomaasProtocol address:", tomaasProtocol.address);
 
@@ -44,7 +44,7 @@ async function main() {
   await tomaasProtocol.addCollection(tomaasRWN.address);
 
   const TomaasMarketplace = await hre.ethers.getContractFactory("TomaasMarketplace");
-  const tomaasMarketplace = await TomaasMarketplace.deploy(tomaasProtocol.address);
+  const tomaasMarketplace = await upgrades.deployProxy(TomaasMarketplace, [tomaasProtocol.address]);
   await tomaasMarketplace.deployed();
   console.log("TomaasMarketplace address:", tomaasMarketplace.address);
 
