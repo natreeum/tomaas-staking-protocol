@@ -9,7 +9,7 @@ require("dotenv").config();
 
 describe("TomaasProtocol", function () {
     let owner, renter, holder, buyer, holder2, renter2, buyer2;
-    let TomaasNFT, tomaasNFT;
+    let TomaasRWN, tomaasRWN;
     let usdc;
 
     const NFT_URI = "https://www.tomaas.ai/nft";
@@ -20,40 +20,41 @@ describe("TomaasProtocol", function () {
     const TOKEN_ID = 0;
     const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
     const TOKEN_NAME = "Trustless Ondemand Mobility Vehicle Ownership pre #1";
-    const TOKEN_SYMBOL = "TMN";
+    const TOKEN_SYMBOL = "RWN";
 
-    const COLLECTION_NAME_1 = "TomaasNFT #1";
-    const COLLECTION_NAME_2 = "TomaasNFT #2";
+    const COLLECTION_NAME_1 = "TomaasRWN #1";
+    const COLLECTION_NAME_2 = "TomaasRWN #2";
     const collectionSupply = 10;
 
     beforeEach(async function () {
         [owner, holder, renter, buyer, holder2, renter2, buyer2] = await ethers.getSigners();
     
         const ERC20 = await ethers.getContractFactory("ERC20Mock");
-        usdc = await ERC20.deploy("USD Coin", "USDC");
+        usdc = await upgrades.deployProxy(ERC20, ["USD Coin", "USDC"]);
         await usdc.deployed();
 
         await usdc.connect(owner).mint(owner.address, TWO_USDC.mul(1000000));
         await usdc.connect(owner).mint(holder.address, TWO_USDC.mul(1000000));
         await usdc.connect(owner).mint(renter.address, TWO_USDC.mul(1000000));
 
-        // Deploy TomaasNFT
-        const TomaasNFT = await ethers.getContractFactory("TomaasNFT");
-        tomaasNFT = await TomaasNFT.deploy(COLLECTION_NAME_1, usdc.address);
-        await tomaasNFT.deployed();
+        // Deploy TomaasRWN
+        const TomaasRWN = await ethers.getContractFactory("TomaasRWN");
+        tomaasRWN = await upgrades.deployProxy(TomaasRWN, [COLLECTION_NAME_1, usdc.address]);
+        await tomaasRWN.deployed();
 
         const TomaasProtocol = await ethers.getContractFactory("TomaasProtocol");
-        tomaasProtocol = await TomaasProtocol.deploy();
+        tomaasProtocol = await upgrades.deployProxy(TomaasProtocol);
         await tomaasProtocol.deployed();
 
-        await tomaasNFT.connect(owner).transferOwnership(tomaasProtocol.address);
-        await tomaasProtocol.connect(owner).addCollection(tomaasNFT.address); 
+        await tomaasRWN.connect(owner).transferOwnership(tomaasProtocol.address);
+        await tomaasProtocol.connect(owner).addCollection(tomaasRWN.address); 
     });
 
     describe("collection", function () {
         it("should add a new collection", async function () {
           // Test case code
-          const tomNFT2 = await (await ethers.getContractFactory("TomaasNFT")).deploy(COLLECTION_NAME_2, usdc.address);
+          const TomaasRWN = await ethers.getContractFactory("TomaasRWN");
+          const tomNFT2 = await upgrades.deployProxy(TomaasRWN, [COLLECTION_NAME_2, usdc.address]);
           await tomNFT2.deployed();
 
           const tx = await tomaasProtocol.addCollection(tomNFT2.address);
@@ -62,32 +63,32 @@ describe("TomaasProtocol", function () {
           expect(await tomaasProtocol.getCollectionIndex(tomNFT2.address)).to.equal(1);
           expect(await tomaasProtocol.getCollections()).to.have.length(2);
           const collection = await tomaasProtocol.getCollectionAt(1);
-          expect(collection.tomaasNFT).to.equal(tomNFT2.address);
+          expect(collection.tomaasRWN).to.equal(tomNFT2.address);
           expect(collection.acceptedToken).to.equal(usdc.address);
         });
         it("should revert if NFT address is zero", async function () {
-          await expect(tomaasProtocol.addCollection(ethers.constants.AddressZero)).to.be.revertedWith("TP: NFT Addr=0");
+          await expect(tomaasProtocol.addCollection(ethers.constants.AddressZero)).to.be.revertedWith("LP: NFT Addr=0");
         });
       });
 
       describe("list for Rent", async function () {
         it("should revert if it is not approved", async function () {
-          await tomaasProtocol.safeMintNFT(tomaasNFT.address, holder.address, NFT_URI);
+          await tomaasProtocol.safeMintNFT(tomaasRWN.address, holder.address, NFT_URI);
           await expect(tomaasProtocol.connect(holder).listingNFT(
-            tomaasNFT.address, TOKEN_ID)).to.be.revertedWith("TP: notApproved");
+            tomaasRWN.address, TOKEN_ID)).to.be.revertedWith("LP: notApproved");
         });
         it("should allow listing of NFTs when approve is used", async function () {
-          await tomaasProtocol.safeMintNFT(tomaasNFT.address, holder.address, NFT_URI);
-          await tomaasNFT.connect(holder).approve(tomaasProtocol.address, TOKEN_ID);
-          await tomaasProtocol.connect(holder).listingNFT(tomaasNFT.address, TOKEN_ID);
-          const nfts = await tomaasProtocol.getListingNFTs(tomaasNFT.address);
+          await tomaasProtocol.safeMintNFT(tomaasRWN.address, holder.address, NFT_URI);
+          await tomaasRWN.connect(holder).approve(tomaasProtocol.address, TOKEN_ID);
+          await tomaasProtocol.connect(holder).listingNFT(tomaasRWN.address, TOKEN_ID);
+          const nfts = await tomaasProtocol.getListingNFTs(tomaasRWN.address);
           expect(nfts.length).to.equal(1);
         });
         it("should allow listing of NFTs when setApprovalForAll is used", async function () {
-          await tomaasProtocol.safeMintNFT(tomaasNFT.address, holder.address, NFT_URI);
-          await tomaasNFT.connect(holder).setApprovalForAll(tomaasProtocol.address, true);
-          await tomaasProtocol.connect(holder).listingNFT(tomaasNFT.address, TOKEN_ID);
-          const nfts = await tomaasProtocol.getListingNFTs(tomaasNFT.address);
+          await tomaasProtocol.safeMintNFT(tomaasRWN.address, holder.address, NFT_URI);
+          await tomaasRWN.connect(holder).setApprovalForAll(tomaasProtocol.address, true);
+          await tomaasProtocol.connect(holder).listingNFT(tomaasRWN.address, TOKEN_ID);
+          const nfts = await tomaasProtocol.getListingNFTs(tomaasRWN.address);
           expect(nfts.length).to.equal(1);
         });
       });

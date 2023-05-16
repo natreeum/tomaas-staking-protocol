@@ -28,31 +28,31 @@ async function main() {
 
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
-  const COLLECTION_NAME_1 = "TomaasNFT #1";
+  const COLLECTION_NAME_1 = "TomaasRWN #1";
 
-  const TomaasNFT = await hre.ethers.getContractFactory("TomaasNFT");
-  const tomaasNFT = await TomaasNFT.deploy(COLLECTION_NAME_1, process.env.USDC_ETH_ADDRESS);
-  await tomaasNFT.deployed();
-  console.log("TomaasNFT address:", tomaasNFT.address);
+  const TomaasRWN = await hre.ethers.getContractFactory("TomaasRWN");
+  const tomaasRWN = await upgrades.deployProxy(TomaasRWN, [COLLECTION_NAME_1, process.env.USDC_ETH_ADDRESS]);
+  await tomaasRWN.deployed();
+  console.log("TomaasRWN address:", tomaasRWN.address);
 
   const TomaasProtocol = await hre.ethers.getContractFactory("TomaasProtocol");
-  const tomaasProtocol = await TomaasProtocol.deploy();
+  const tomaasProtocol = await upgrades.deployProxy(TomaasProtocol);
   await tomaasProtocol.deployed();
   console.log("TomaasProtocol address:", tomaasProtocol.address);
 
-  await tomaasNFT.transferOwnership(tomaasProtocol.address);
-  await tomaasProtocol.addCollection(tomaasNFT.address);
+  await tomaasRWN.transferOwnership(tomaasProtocol.address);
+  await tomaasProtocol.addCollection(tomaasRWN.address);
 
   const TomaasMarketplace = await hre.ethers.getContractFactory("TomaasMarketplace");
-  const tomaasMarketplace = await TomaasMarketplace.deploy(tomaasProtocol.address);
+  const tomaasMarketplace = await upgrades.deployProxy(TomaasMarketplace, [tomaasProtocol.address]);
   await tomaasMarketplace.deployed();
   console.log("TomaasMarketplace address:", tomaasMarketplace.address);
 
   // We also save the contract's artifacts and address in the frontend directory
-  saveFrontendFiles(tomaasNFT, tomaasProtocol, tomaasMarketplace); 
+  saveFrontendFiles(tomaasRWN, tomaasProtocol, tomaasMarketplace); 
 }
 
-function saveFrontendFiles(tomaasNFT, tomaasProtocol, tomaasMarketplace) {
+function saveFrontendFiles(tomaasRWN, tomaasProtocol, tomaasMarketplace) {
   const fs = require("fs");
   const contractsDir = path.join(__dirname, "../frontend/contracts");
 
@@ -63,14 +63,14 @@ function saveFrontendFiles(tomaasNFT, tomaasProtocol, tomaasMarketplace) {
   fs.writeFileSync(
     path.join(contractsDir, "contract-address.json"),
     JSON.stringify({ 
-      TomaasNFT: tomaasNFT.address, 
+      TomaasRWN: tomaasRWN.address, 
       TomaasProtocol: tomaasProtocol.address, 
       TomaasMarketplace: tomaasMarketplace.address
     }, undefined, 2));
 
-  const TomaasNFArtifact = artifacts.readArtifactSync("TomaasNFT");
+  const TomaasNFArtifact = artifacts.readArtifactSync("TomaasRWN");
   fs.writeFileSync(
-    path.join(contractsDir, "TomaasNFT.json"),
+    path.join(contractsDir, "TomaasRWN.json"),
     JSON.stringify(TomaasNFArtifact, null, 2)
   );
 

@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: BSL-1.0
 pragma solidity ^0.8.17;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 
-import "./TomaasNFT.sol";
+import "./TomaasRWN.sol";
 
 // import "hardhat/console.sol";
 
@@ -17,19 +18,22 @@ import "./TomaasNFT.sol";
  * owner, create collection, mint NFT
  * holder, owner of NFT and receive earnings from renter per monthly
  * renter, rent NFT from holder and pay earnings to holder per monthly
- * @title rental place for TomaasNFT
+ * @title rental place for TomaasRWN
  * @author tomaas labs 
  * @notice 
  */
-contract TomaasProtocol is ReentrancyGuard, Ownable, Pausable {
-
-
+contract TomaasProtocol is 
+    Initializable,
+    ReentrancyGuardUpgradeable, 
+    OwnableUpgradeable,
+    PausableUpgradeable
+{
     // Add the library methods
-    using EnumerableSet for EnumerableSet.UintSet;
+    using EnumerableSetUpgradeable for EnumerableSetUpgradeable.UintSet;
 
     struct CollectionInfo {
-        TomaasNFT tomaasNFT; // address of collection
-        IERC20 acceptedToken; // first we use USDC, later we will use Another Token
+        TomaasRWN tomaasRWN; // address of collection
+        IERC20Upgradeable acceptedToken; // first we use USDC, later we will use Another Token
     }
 
     mapping(uint16 => CollectionInfo) private _collections;
@@ -42,9 +46,16 @@ contract TomaasProtocol is ReentrancyGuard, Ownable, Pausable {
     event NFTsUnlisted(address indexed nftAddress, address indexed owner);
 
     //nftaddress => tokenListForRent
-    mapping(address => EnumerableSet.UintSet) private _nftListForRent; 
+    mapping(address => EnumerableSetUpgradeable.UintSet) private _nftListForRent; 
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
+        _disableInitializers();
+    }
+
+    function initialize() initializer public {
+        __Pausable_init();
+        __Ownable_init();
     }
 
     function pause() public onlyOwner {
@@ -61,13 +72,13 @@ contract TomaasProtocol is ReentrancyGuard, Ownable, Pausable {
         nonReentrant
         returns (uint16) 
     {
-        require(nftAddress != address(0), "TP: NFT Addr=0");
+        require(nftAddress != address(0), "LP: NFT Addr=0");
 
-        TomaasNFT tomaasNFT = TomaasNFT(nftAddress); 
+        TomaasRWN tomaasRWN = TomaasRWN(nftAddress); 
 
-        address tokenAddress = tomaasNFT.getAcceptedToken();
+        address tokenAddress = tomaasRWN.getAcceptedToken();
 
-        _collections[_collectionCount] = CollectionInfo(tomaasNFT, IERC20(tokenAddress));
+        _collections[_collectionCount] = CollectionInfo(tomaasRWN, IERC20Upgradeable(tokenAddress));
         _collectionCount++;
 
         emit AddNewCollection(msg.sender, nftAddress, tokenAddress);
@@ -86,10 +97,10 @@ contract TomaasProtocol is ReentrancyGuard, Ownable, Pausable {
     }
 
     function _existCollection(address nftAddress) internal view returns (bool) {
-        require(nftAddress != address(0), "TP: nftAddr=0");
-        require(_collectionCount != 0, "TP: no collections");
+        require(nftAddress != address(0), "LP: nftAddr=0");
+        require(_collectionCount != 0, "LP: no collections");
         for (uint16 i = 0; i < _collectionCount; i++) {
-            if (address(_collections[i].tomaasNFT) == nftAddress) {
+            if (address(_collections[i].tomaasRWN) == nftAddress) {
                 return true;
             }
         }
@@ -97,30 +108,30 @@ contract TomaasProtocol is ReentrancyGuard, Ownable, Pausable {
     }
 
     function getCollectionIndex(address nftAddress) public view returns (uint16) {
-        require(nftAddress != address(0), "TP: nftAddr=0");
-        require(_collectionCount != 0, "TP: no collections");
+        require(nftAddress != address(0), "LP: nftAddr=0");
+        require(_collectionCount != 0, "LP: no collections");
         for (uint16 i = 0; i < _collectionCount; i++) {
-            if (address(_collections[i].tomaasNFT) == nftAddress) {
+            if (address(_collections[i].tomaasRWN) == nftAddress) {
                 return i;
             }
         }
 
-        revert("TP: not found");
+        revert("LP: not found");
     }
 
     function getCollectionAt(uint16 index) external view returns (CollectionInfo memory) {
-        require(index < _collectionCount, "TP: outOfBoun");
+        require(index < _collectionCount, "LP: outOfBoun");
         return _collections[index];
     }
 
     function getCollectionInfo(address nftAddress) external view returns (CollectionInfo memory) {
         uint16 index = getCollectionIndex(nftAddress);
-        require(index < _collectionCount, "TP: outOfBoun");
+        require(index < _collectionCount, "LP: outOfBoun");
         return _collections[index];
     }
 
     function isListedNFT(address nftAddress, uint256 tokenId) public view returns (bool) {
-        return EnumerableSet.contains(_nftListForRent[nftAddress], tokenId);
+        return EnumerableSetUpgradeable.contains(_nftListForRent[nftAddress], tokenId);
     }
 
     /**
@@ -131,13 +142,13 @@ contract TomaasProtocol is ReentrancyGuard, Ownable, Pausable {
     function listingNFT(address nftAddress, uint256 tokenId) public {
         uint16 index = getCollectionIndex(nftAddress);
 
-        TomaasNFT tomaasNFT = _collections[index].tomaasNFT;
+        TomaasRWN tomaasRWN = _collections[index].tomaasRWN;
 
-        require(tomaasNFT.ownerOf(tokenId) == msg.sender, "TP: notOwner");
-        require(tomaasNFT.getApproved(tokenId) == address(this)
-         || tomaasNFT.isApprovedForAll(msg.sender, address(this)), "TP: notApproved");
+        require(tomaasRWN.ownerOf(tokenId) == msg.sender, "LP: notOwner");
+        require(tomaasRWN.getApproved(tokenId) == address(this)
+         || tomaasRWN.isApprovedForAll(msg.sender, address(this)), "LP: notApproved");
 
-        EnumerableSet.add(_nftListForRent[nftAddress], tokenId);
+        EnumerableSetUpgradeable.add(_nftListForRent[nftAddress], tokenId);
 
         emit NFTListed(nftAddress, tokenId);
     }
@@ -149,8 +160,8 @@ contract TomaasProtocol is ReentrancyGuard, Ownable, Pausable {
      */
     function unlistingNFT(address nftAddress, uint256 tokenId) public {
         uint16 index = getCollectionIndex(nftAddress);
-        require(_collections[index].tomaasNFT.ownerOf(tokenId) == msg.sender, "TP: notOwner");
-        EnumerableSet.remove(_nftListForRent[nftAddress], tokenId);
+        require(_collections[index].tomaasRWN.ownerOf(tokenId) == msg.sender, "LP: notOwner");
+        EnumerableSetUpgradeable.remove(_nftListForRent[nftAddress], tokenId);
 
         emit NFTUnlisted(nftAddress, tokenId);
     }
@@ -161,13 +172,13 @@ contract TomaasProtocol is ReentrancyGuard, Ownable, Pausable {
      */
     function listingNFTOwn(address nftAddress) public {
         uint16 index = getCollectionIndex(nftAddress);
-        uint256 totalSupply = _collections[index].tomaasNFT.totalSupply();
-        require(totalSupply > 0, "TP: no NFTs");
-        require(_collections[index].tomaasNFT.isApprovedForAll(msg.sender, address(this)), "TP: notApproved");
+        uint256 totalSupply = _collections[index].tomaasRWN.totalSupply();
+        require(totalSupply > 0, "LP: no NFTs");
+        require(_collections[index].tomaasRWN.isApprovedForAll(msg.sender, address(this)), "LP: notApproved");
 
         for (uint256 i = 0; i < totalSupply; i++) {
-            if (_collections[index].tomaasNFT.ownerOf(i) == msg.sender) {
-                EnumerableSet.add(_nftListForRent[nftAddress], i);
+            if (_collections[index].tomaasRWN.ownerOf(i) == msg.sender) {
+                EnumerableSetUpgradeable.add(_nftListForRent[nftAddress], i);
             }
         }
 
@@ -176,12 +187,12 @@ contract TomaasProtocol is ReentrancyGuard, Ownable, Pausable {
 
     function unlistingNFTOwn(address nftAddress) public {
         uint16 index = getCollectionIndex(nftAddress);
-        uint256 totalSupply = _collections[index].tomaasNFT.totalSupply();
-        require(totalSupply > 0, "TP: no NFTs");
+        uint256 totalSupply = _collections[index].tomaasRWN.totalSupply();
+        require(totalSupply > 0, "LP: no NFTs");
 
         for (uint256 i = 0; i < totalSupply; i++) {
-            if (_collections[index].tomaasNFT.ownerOf(i) == msg.sender) {
-                EnumerableSet.remove(_nftListForRent[nftAddress], i);
+            if (_collections[index].tomaasRWN.ownerOf(i) == msg.sender) {
+                EnumerableSetUpgradeable.remove(_nftListForRent[nftAddress], i);
             }
         }
 
@@ -194,18 +205,18 @@ contract TomaasProtocol is ReentrancyGuard, Ownable, Pausable {
      * @param expires time to rent 
      */
     function rentAllNFTInCollection(address nftAddress, uint64 expires) external nonReentrant {
-        require(nftAddress != address(0), "TP: nftAddr=0");
+        require(nftAddress != address(0), "LP: nftAddr=0");
 
         uint16 index = getCollectionIndex(nftAddress);
-        uint256 totalSupply = _collections[index].tomaasNFT.totalSupply();
-        require(totalSupply > 0, "TP: no NFTs");
+        uint256 totalSupply = _collections[index].tomaasRWN.totalSupply();
+        require(totalSupply > 0, "LP: no NFTs");
 
         for (uint256 i = 0; i < totalSupply; i++) {
-            require(_collections[index].tomaasNFT.userOf(i) == address(0), "TP: isNotAvailable");
+            require(_collections[index].tomaasRWN.userOf(i) == address(0), "LP: isNotAvailable");
         }
 
         for (uint256 i = 0; i < totalSupply; i++) {
-            _collections[index].tomaasNFT.setUser(i, msg.sender, expires);
+            _collections[index].tomaasRWN.setUser(i, msg.sender, expires);
         }
     }
 
@@ -217,22 +228,22 @@ contract TomaasProtocol is ReentrancyGuard, Ownable, Pausable {
      */
     function rentNFTInCollection(address nftAddress, uint256 tokenId, uint64 expires) external nonReentrant {
         uint16 index = getCollectionIndex(nftAddress);
-        _collections[index].tomaasNFT.setUser(tokenId, msg.sender, expires);
+        _collections[index].tomaasRWN.setUser(tokenId, msg.sender, expires);
     }
 
     function getListingNFTs(address nftAddress) public view returns (uint256[] memory) {
-        require(_existCollection(nftAddress), "TP: not found");
+        require(_existCollection(nftAddress), "LP: not found");
 
-        uint256[] memory nftIds = new uint256[](EnumerableSet.length(_nftListForRent[nftAddress]));
-        for (uint256 i = 0; i < EnumerableSet.length(_nftListForRent[nftAddress]); i++) {
-            nftIds[i] = EnumerableSet.at(_nftListForRent[nftAddress], i);
+        uint256[] memory nftIds = new uint256[](EnumerableSetUpgradeable.length(_nftListForRent[nftAddress]));
+        for (uint256 i = 0; i < EnumerableSetUpgradeable.length(_nftListForRent[nftAddress]); i++) {
+            nftIds[i] = EnumerableSetUpgradeable.at(_nftListForRent[nftAddress], i);
         }
         return nftIds;
     }
 
     function getCountOfNFTsListed(address nftAddress) public view returns (uint256) {
-        require(_existCollection(nftAddress), "TP: not found");
-        return EnumerableSet.length(_nftListForRent[nftAddress]);
+        require(_existCollection(nftAddress), "LP: not found");
+        return EnumerableSetUpgradeable.length(_nftListForRent[nftAddress]);
     }
 
     /**
@@ -243,6 +254,6 @@ contract TomaasProtocol is ReentrancyGuard, Ownable, Pausable {
      */
     function safeMintNFT(address nftAddress, address to, string memory uri) public {
         uint16 index = getCollectionIndex(nftAddress);
-        _collections[index].tomaasNFT.safeMint(to, uri);
+        _collections[index].tomaasRWN.safeMint(to, uri);
     }
 }
