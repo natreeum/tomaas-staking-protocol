@@ -17,11 +17,21 @@ interface ITokenForRewards is IERC20Upgradeable {
 contract TomaasStakingPool is OwnableUpgradeable, ERC721HolderUpgradeable
 {
     ITokenForRewards public tokenForRewards;
-    IERC721Upgradeable public nft;
+    IERC721Upgradeable public liquidityProviderNft;
 
-    constructor(IERC721Upgradeable _nft, ITokenForRewards _tokenForRewards) {
+    bool public rewardsClaimable;
+    bool stakingInitialized;
+    uint256 public stakingStartTime;
+
+    constructor(IERC721Upgradeable _liquidityProviderNft, ITokenForRewards _tokenForRewards) {
         tokenForRewards = _tokenForRewards;
-        nft = _nft;
+        liquidityProviderNft = _liquidityProviderNft;
     }
-    
+
+    function initStaking() public onlyOwner {
+        require(!stakingInitialized, "Staking is already initialized.");
+        stakingStartTime = block.timestamp;
+        stakingInitialized = true;
+    }
+
 }
