@@ -10,6 +10,7 @@ describe("TomaaS Staking Pool", () => {
     
     const nullAddress = "0x0000000000000000000000000000000000000000";
     const UsdcAddress = process.env.USDC_ETH_ADDRESS;
+    const USDC_UNIT = ethers.utils.parseUnits("1000", 6).mul(1000000);
 
     let lpnContract;
     let rwnContract;
@@ -31,9 +32,17 @@ describe("TomaaS Staking Pool", () => {
         await erc20MockContract.deployed();
         console.log(`Address of ERC20 Mock Contract: ${erc20MockContract.address}`);
 
+        await erc20MockContract.connect(deployerSigner).mint(deployerAddress, USDC_UNIT);
+        await erc20MockContract.connect(deployerSigner).mint(clientAddress, USDC_UNIT);
+        console.log(`balance of provider : ${await erc20MockContract.balanceOf(deployerAddress)}`);
+        console.log(`balance of client : ${await erc20MockContract.balanceOf(clientAddress)}`);
+
         // LPN Contract
         const lpnContractFactory = await ethers.getContractFactory("TomaasLPN");
-        lpnContract = await upgrades.deployProxy(lpnContractFactory, [], {
+        lpnContract = await upgrades.deployProxy(lpnContractFactory, [
+            erc20MockContract.address,
+            ethers.utils.parseUnits("100", 6).mul(1000000)
+        ], {
             initializer: "initialize",
         });
         await lpnContract.deployed();
@@ -60,35 +69,20 @@ describe("TomaaS Staking Pool", () => {
 
     it("set approval and mint nfts", async () => {
         // set Approval For All in the NFT Contract to the Staking Pool Contract
+        const [deployerSigner, clientSigner] = await ethers.getSigners();
+
+        await erc20MockContract.connect(deployerSigner).approve(
+            lpnContract.address,
+            ethers.utils.parseUnits("500", 6).mul(6000000)
+        );
+
         await expect(
             lpnContract.setApprovalForAll(stakingPoolContract.address, true)
         )
             .to.emit(lpnContract, "ApprovalForAll")
             .withArgs(deployerAddress, stakingPoolContract.address, true);
 
-        await expect(lpnContract.safeMint(clientAddress, tokenUri))
-            .to.emit(lpnContract, "Transfer")
-            .withArgs(nullAddress, clientAddress, 0);
-
-        await expect(lpnContract.safeMint(clientAddress, tokenUri))
-            .to.emit(lpnContract, "Transfer")
-            .withArgs(nullAddress, clientAddress, 1);
-
-        await expect(lpnContract.safeMint(clientAddress, tokenUri))
-            .to.emit(lpnContract, "Transfer")
-            .withArgs(nullAddress, clientAddress, 2);
-
-        await expect(lpnContract.safeMint(clientAddress, tokenUri))
-            .to.emit(lpnContract, "Transfer")
-            .withArgs(nullAddress, clientAddress, 3);
-
-        await expect(lpnContract.safeMint(clientAddress, tokenUri))
-            .to.emit(lpnContract, "Transfer")
-            .withArgs(nullAddress, clientAddress, 4);
-
-        await expect(lpnContract.safeMint(clientAddress, tokenUri))
-            .to.emit(lpnContract, "Transfer")
-            .withArgs(nullAddress, clientAddress, 5);
+        await lpnContract.safeMint_mul(clientAddress, tokenUri, 6);
     });
 
     it("stake a nft", async () => {
