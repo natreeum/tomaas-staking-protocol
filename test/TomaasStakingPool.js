@@ -60,7 +60,6 @@ describe("TomaaS Staking Pool", () => {
 
     it("set approval and mint nfts", async () => {
         // set Approval For All in the NFT Contract to the Staking Pool Contract
-        console.log((stakingPoolContract.address, clientAddress, 0));
         await expect(
             lpnContract.setApprovalForAll(stakingPoolContract.address, true)
         )
@@ -74,22 +73,55 @@ describe("TomaaS Staking Pool", () => {
         await expect(lpnContract.safeMint(clientAddress, tokenUri))
             .to.emit(lpnContract, "Transfer")
             .withArgs(nullAddress, clientAddress, 1);
+
+        await expect(lpnContract.safeMint(clientAddress, tokenUri))
+            .to.emit(lpnContract, "Transfer")
+            .withArgs(nullAddress, clientAddress, 2);
     });
 
     it("stake a nft", async () => {
+        const [deployerSigner, clientSigner] = await ethers.getSigners();
 
+        await expect(
+            lpnContract.connect(clientSigner).setApprovalForAll(
+                stakingPoolContract.address,
+                true
+            )
+        )
+            .to.emit(lpnContract, "ApprovalForAll")
+            .withArgs(clientAddress, stakingPoolContract.address, true);
+        
+        await expect(stakingPoolContract.connect(clientSigner).stakeToken(0))
+            .to.emit(stakingPoolContract, "Staked")
+            .withArgs(clientAddress, 0);
+        console.log(`token id 0 is staked!`);
     });
 
     it("stake nfts", async () => {
+        const [deployerSigner, clientSigner] = await ethers.getSigners();
 
+        await expect(
+            lpnContract.connect(clientSigner).setApprovalForAll(
+                stakingPoolContract.address,
+                true
+            )
+        )
+            .to.emit(lpnContract, "ApprovalForAll")
+            .withArgs(clientAddress, stakingPoolContract.address, true);
+        
+        await expect(stakingPoolContract.connect(clientSigner).stakeTokens([1,2]))
+            .to.emit(stakingPoolContract, "Staked")
+            .withArgs(clientAddress, 2);
+        console.log(`token id 1,2 is staked!`);
     });
 
     it("get staked nfts", async () => {
-
+        const stakedTokens = await stakingPoolContract.getStakedTokens(clientAddress);
+        console.log(`staked token ids : ${stakedTokens.toString()}`);
     });
 
     it("unstake a nft", async () => {
-
+        
     });
 
     it("unstake nfts", async () => {
