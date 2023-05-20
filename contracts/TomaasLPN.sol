@@ -31,17 +31,19 @@ contract TomaasLPN is
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
-        // initialize(usdc);
     }
 
-    function initialize(address _acceptedToken) public initializer {
+    function initialize(
+        address _acceptedToken,
+        uint256 _price
+    ) public initializer {
         __ERC721_init("Tomaas Liquidity Provider NFT", "TLN");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
         __Pausable_init();
         __Ownable_init();
         acceptedToken = IERC20Upgradeable(_acceptedToken);
-        price = 10;
+        price = _price;
     }
 
     function pause() public onlyOwner {
@@ -58,25 +60,8 @@ contract TomaasLPN is
     //     _safeMint(to, tokenId);
     //     _setTokenURI(tokenId, uri);
     // }
-    function getPrice(uint256 num) public view returns (uint256) {
-        return price * num;
-    }
 
-    function getBalance() public view returns (uint256) {
-        IERC20Upgradeable token = IERC20Upgradeable(acceptedToken);
-        return token.balanceOf(msg.sender);
-    }
-
-    function check(uint256 num) public view returns (bool) {
-        IERC20Upgradeable token = IERC20Upgradeable(acceptedToken);
-        return token.balanceOf(msg.sender) < price * num;
-    }
-
-    function safeMint_mul(
-        address to,
-        string memory uri,
-        uint256 num
-    ) public onlyOwner {
+    function safeMint_mul(address to, string memory uri, uint256 num) public {
         IERC20Upgradeable token = IERC20Upgradeable(acceptedToken);
         require(
             !(token.balanceOf(msg.sender) < price * num),
