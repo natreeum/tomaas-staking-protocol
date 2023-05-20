@@ -16,6 +16,8 @@ describe("TomaaS Staking Pool", () => {
     let erc20MockContract;
     let stakingPoolContract;
 
+    const tokenUri = "https://ipfs.io/ipfs/Qm...";
+
     before("deploy associated contracts", async () => {
         const [deployerSigner, clientSigner] = await ethers.getSigners();
         deployerAddress = deployerSigner.address;
@@ -64,5 +66,14 @@ describe("TomaaS Staking Pool", () => {
         )
             .to.emit(lpnContract, "ApprovalForAll")
             .withArgs(deployerAddress, stakingPoolContract.address, true);
+
+        await expect(lpnContract.safeMint(clientAddress, tokenUri))
+            .to.emit(lpnContract, "Transfer")
+            .withArgs(nullAddress, clientAddress, 0);
+
+        await expect(lpnContract.safeMint(clientAddress, tokenUri))
+            .to.emit(lpnContract, "Transfer")
+            .withArgs(nullAddress, clientAddress, 1);
+
     });
 });
