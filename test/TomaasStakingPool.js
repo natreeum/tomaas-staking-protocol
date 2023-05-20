@@ -300,5 +300,20 @@ describe("TomaaS Staking Pool", () => {
 
         console.log(`rwnClientAddress is ${rwnClientSigner.address}`);
         console.log(listedNFTs[0][0]);
-    })
+    });
+
+    it("mint TLNs", async () => {
+        const [deployerSigner, tlnClientSigner, rwnClientSigner] = await ethers.getSigners();
+
+        await erc20MockContract.connect(deployerSigner).mint(deployerAddress, USDC_UNIT);
+
+        await expect(
+            lpnContract.setApprovalForAll(stakingPoolContract.address, true)
+        )
+            .to.emit(lpnContract, "ApprovalForAll")
+            .withArgs(deployerAddress, stakingPoolContract.address, true);
+
+        await lpnContract.safeMint_mul(tlnClientSigner.address, tokenUri, 6);
+    });
+
 });
