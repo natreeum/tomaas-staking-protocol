@@ -267,7 +267,7 @@ describe("TomaaS Staking Pool", () => {
         //      - transfer to owner of TLN
     });
 
-    it("mint 10 RWN", async () => {
+    it("mint RWNs", async () => {
         const [deployerSigner, clientSigner, rwnClientSigner] = await ethers.getSigners();
 
         for (let i = 0; i < 10; i++) {
@@ -292,4 +292,13 @@ describe("TomaaS Staking Pool", () => {
 
         await marketplaceContract.isForSale(rwnContract.address,TOKEN_ID);
     });
+
+    it("get listed RWNs to MarketPlace Contract", async () => {
+        const [deployerSigner, clientSigner, rwnClientSigner] = await ethers.getSigners();
+
+        const listedNFTs = await marketplaceContract.getListedNFTs(rwnContract.address);
+
+        console.log(`rwnClientAddress is ${rwnClientSigner.address}`);
+        console.log(listedNFTs[0][0]);
+    })
 });
