@@ -72,10 +72,13 @@ describe("TomaaS Staking Pool", () => {
     });
 
     it("deploy and initialize tomaas-staking-pool-contract", async () => {
+        const [deployerSigner, clientSigner] = await ethers.getSigners();
+
         const stakingPoolContractFactory = await ethers.getContractFactory("TomaasStakingPool");
         stakingPoolContract = await upgrades.deployProxy(stakingPoolContractFactory, [
             lpnContract.address, 
-            erc20MockContract.address
+            erc20MockContract.address,
+            marketplaceContract.address
         ], {
             initializer: "initialize",
         });
@@ -86,6 +89,12 @@ describe("TomaaS Staking Pool", () => {
         await stakingPoolContract.initStaking();
         await stakingPoolContract.setRewardsClaimable(true);
         console.log("StakingSystemContract is initialized");
+
+        // WL to lpContract.
+        await lpnContract.connect(deployerSigner).addToWL(stakingPoolContract.address);
+
+        const isWhiteList = await lpnContract.isWL(stakingPoolContract.address);
+        console.log("is WhiteList : " + isWhiteList);
     });
 
     it("set approval and mint nfts", async () => {
@@ -245,28 +254,6 @@ describe("TomaaS Staking Pool", () => {
 
     });
 
-    it("abdsfasg", async () => {
-        // 1. RWN minting 10 ( RWN contract )
-
-        // 1.5 service provider rent RWN.
-
-        // 2. listing RWNs ( Marketplace contract ) // 300 가격
-
-        // 3. getListedNfts ( Marketplace contract )
-
-        // 4. mint TLNs 10 ( TLN contract )
-
-        // 5. stake TLNs 6 ( StakingPool contract )
-        //      - withdraw erc20 from TLN to StakingPool
-        //      - buy RWN (MarketPlace)
-
-        // 6. service provider payout to RWN.
-
-        // 7. owner of TLN claim to Staking Pool.
-        //      - claim to RWN
-        //      - transfer to owner of TLN
-    });
-
     it("mint RWNs", async () => {
         const [deployerSigner, clientSigner, rwnClientSigner] = await ethers.getSigners();
 
@@ -314,6 +301,29 @@ describe("TomaaS Staking Pool", () => {
             .withArgs(deployerAddress, stakingPoolContract.address, true);
 
         await lpnContract.safeMint_mul(tlnClientSigner.address, tokenUri, 6);
+    });
+
+    it("stake TLNs", async () => {
+        const [deployerSigner, tlnClientSigner, rwnClientSigner] = await ethers.getSigners();
+
+        console.log(`[Before Stake]balance of Staking Pool : ${await erc20MockContract.balanceOf(stakingPoolContract.address)}`);
+
+        await expect(
+            lpnContract.connect(tlnClientSigner).setApprovalForAll(
+                stakingPoolContract.address,
+                true
+            )
+        )
+            .to.emit(lpnContract, "ApprovalForAll")
+            .withArgs(tlnClientSigner.address, stakingPoolContract.address, true);
+
+        // stake
+        await expect(stakingPoolContract.connect(tlnClientSigner).stakeToken(10))
+            .to.emit(stakingPoolContract, "Staked")
+            .withArgs(tlnClientSigner.address, 10);
+        console.log(`token id 10 is staked!`);
+
+        console.log(`[After Stake] balance of Staking Pool : ${await erc20MockContract.balanceOf(stakingPoolContract.address)}`);
     });
 
 });
