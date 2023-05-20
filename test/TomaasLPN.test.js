@@ -4,6 +4,7 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
+const { ethers } = require("hardhat");
 
 require("dotenv").config();
 
@@ -30,6 +31,13 @@ describe("TomaasLPN", function () {
       ethers.utils.parseUnits("100", 6).mul(1000000),
     ]);
     await tomaasLPN.deployed();
+
+    // const poolMock = await ethers.getContractFactory("PoolMock");
+    // MockContract = await upgrades.deployProxy(poolMock, [
+    //   usdc.address,
+    //   tomaasLPN.address,
+    // ]);
+    // await MockContract.deployed();
   });
 
   describe("Deployment", function () {
@@ -99,4 +107,30 @@ describe("TomaasLPN", function () {
     //   ).to.be.revertedWith("Ownable: caller is not the owner");
     // });
   });
+
+  //   describe("Withdraw", () => {
+  //     before(async () => {
+  //       await usdc
+  //         .connect(addr1)
+  //         .approve(
+  //           tomaasLPN.address,
+  //           ethers.utils.parseUnits("100", 6).mul(1000000)
+  //         );
+  //       await tomaasLPN.connect(addr1).safeMint_mul(addr1.address, tokenURI, 1);
+  //     });
+  //     it("Contract USDC Balance", async () => {
+  //       expect(await usdc.balanceOf(tomaasLPN.address)).to.equal(
+  //         ethers.utils.parseUnits("100", 6).mul(1000000)
+  //       );
+  //     });
+  //     it("Addr1 USDC Balance", async () => {
+  //       expect(await usdc.balanceOf(addr1.address)).to.equal(
+  //         ethers.utils.parseUnits("900", 6).mul(1000000)
+  //       );
+  //     });
+  //     it("Is Minted", async () => {
+  //       expect(await tomaasLPN.balanceOf(addr1.address)).to.equal(1);
+  //     });
+  //     // it("Withdraw from contract", async () => {});
+  //   });
 });
