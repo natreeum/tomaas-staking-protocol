@@ -163,6 +163,9 @@ describe("TomaaS Staking Pool", () => {
         )
         console.log(`the client address : ${clientAddress}`);
         console.log(`the owner of token id 2 : ${ownerAddress}`);
+
+        const stakedTokenIds = await stakingPoolContract.getStakedTokens(clientAddress);
+        console.log(`staked token ids : ${stakedTokenIds.toString()}`);
     });
 
     it("unstake nfts", async () => {
