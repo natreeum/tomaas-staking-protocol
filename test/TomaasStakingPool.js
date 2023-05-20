@@ -84,6 +84,10 @@ describe("TomaaS Staking Pool", () => {
 
     });
 
+    it("get staked nfts", async () => {
+
+    });
+
     it("unstake a nft", async () => {
 
     });
