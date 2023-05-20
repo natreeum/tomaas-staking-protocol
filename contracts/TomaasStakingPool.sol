@@ -7,6 +7,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/utils/ERC721HolderUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+import "./TomaasLPN.sol";
+import "./TomaasRWN.sol";
 
 import "hardhat/console.sol";
 
@@ -21,7 +23,9 @@ contract TomaasStakingPool is
     OwnableUpgradeable
 {
     ITokenForRewards public tokenForRewards;
-    IERC721Upgradeable public liquidityProviderNft;
+    // IERC721Upgradeable public liquidityProviderNft;
+    TomaasLPN public liquidityProviderNft;
+    TomaasRWN public realWorldNft;
 
     // [ Data of Staking Pool Contract ]
     bool public rewardsClaimable;
@@ -66,7 +70,7 @@ contract TomaasStakingPool is
     event EmergencyUnstake(address indexed user, uint256 tokenId);
 
     // function initialize() initializer public {
-    function initialize(IERC721Upgradeable _liquidityProviderNft, ITokenForRewards _tokenForRewards) initializer public {
+    function initialize(TomaasLPN _liquidityProviderNft, ITokenForRewards _tokenForRewards) initializer public {
         __Ownable_init();
         tokenForRewards = _tokenForRewards;
         liquidityProviderNft = _liquidityProviderNft;
