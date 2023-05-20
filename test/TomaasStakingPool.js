@@ -58,7 +58,7 @@ describe("TomaaS Staking Pool", () => {
         console.log("StakingSystemContract is initialized");
     });
 
-    it("set Approval and Mint NFT", async () => {
+    it("set approval and mint nfts", async () => {
         // set Approval For All in the NFT Contract to the Staking Pool Contract
         console.log((stakingPoolContract.address, clientAddress, 0));
         await expect(
@@ -74,6 +74,25 @@ describe("TomaaS Staking Pool", () => {
         await expect(lpnContract.safeMint(clientAddress, tokenUri))
             .to.emit(lpnContract, "Transfer")
             .withArgs(nullAddress, clientAddress, 1);
+    });
+
+    it("stake a nft", async () => {
+
+    });
+
+    it("stake nfts", async () => {
+
+    });
+
+    it("unstake a nft", async () => {
+
+    });
+
+    it("unstake nfts", async () => {
+
+    });
+
+    it("unstake all nfts", async () => {
 
     });
 });
