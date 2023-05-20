@@ -174,13 +174,6 @@ contract TomaasStakingPool is
 
         Staker storage staker = stakerMap[_userAddress];
 
-        // this is not perfect
-        if (staker.tokenIds.length > 0) {
-            staker.tokenIds.pop();
-        }
-
-        // to-do : should handle metadata
-
         staker.tokenStakingCoolDown[_tokenId] = 0;
         delete tokenOwnerMap[_tokenId];
 
@@ -188,6 +181,31 @@ contract TomaasStakingPool is
 
         emit Unstaked(_userAddress, _tokenId);
         stakedTotal--;
+
+        uint256 lastIndex = staker.tokenIds.length - 1;
+        uint256 lastValue = staker.tokenIds[lastIndex];
+        if (lastValue == _tokenId) {
+            staker.tokenIds.pop();
+        } else {
+            if (staker.tokenIds.length > 0) {
+                for (uint256 i = 0; i < staker.tokenIds.length; i++) {
+                    if(staker.tokenIds[i] == _tokenId) {
+                        staker.tokenIds[i] = lastValue;
+                        staker.tokenIds.pop();
+                    }
+                }
+            }
+        }
     }
+
+    // function removeElementByValue(uint256 _value, uint256[] memory tokenIds) internal {
+    //     uint[] storage array;
+
+    //     for (uint256 i = 0; i < tokenIds.length; i++) {
+    //         if (tokenIds[i] != _value) {
+    //             array.push(tokenIds[i]);
+    //         }
+    //     }
+    // }
 
 }
