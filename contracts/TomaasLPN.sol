@@ -9,32 +9,39 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 /// @custom:security-contact security@tomaas.ai
-contract TomaasLPN is 
-    Initializable, 
-    ERC721Upgradeable, 
-    ERC721EnumerableUpgradeable, 
-    ERC721URIStorageUpgradeable, 
-    PausableUpgradeable, 
+contract TomaasLPN is
+    Initializable,
+    ERC721Upgradeable,
+    ERC721EnumerableUpgradeable,
+    ERC721URIStorageUpgradeable,
+    PausableUpgradeable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable
 {
     using CountersUpgradeable for CountersUpgradeable.Counter;
 
     CountersUpgradeable.Counter private _tokenIdCounter;
+    IERC20Upgradeable private acceptedToken;
+
+    uint256 price;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
+        // initialize(usdc);
     }
 
-    function initialize() initializer public {
+    function initialize(address _acceptedToken) public initializer {
         __ERC721_init("Tomaas Liquidity Provider NFT", "TLN");
         __ERC721Enumerable_init();
         __ERC721URIStorage_init();
         __Pausable_init();
         __Ownable_init();
+        acceptedToken = IERC20Upgradeable(_acceptedToken);
+        price = 10;
     }
 
     function pause() public onlyOwner {
@@ -45,31 +52,73 @@ contract TomaasLPN is
         _unpause();
     }
 
-    function safeMint(address to, string memory uri) public onlyOwner {
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        _safeMint(to, tokenId);
-        _setTokenURI(tokenId, uri);
+    // function safeMint(address to, string memory uri) public onlyOwner {
+    //     uint256 tokenId = _tokenIdCounter.current();
+    //     _tokenIdCounter.increment();
+    //     _safeMint(to, tokenId);
+    //     _setTokenURI(tokenId, uri);
+    // }
+    function getPrice(uint256 num) public view returns (uint256) {
+        return price * num;
     }
 
-    function _beforeTokenTransfer(address from, address to, uint256 tokenId, uint256 batchSize)
+    function getBalance() public view returns (uint256) {
+        IERC20Upgradeable token = IERC20Upgradeable(acceptedToken);
+        return token.balanceOf(msg.sender);
+    }
+
+    function check(uint256 num) public view returns (bool) {
+        IERC20Upgradeable token = IERC20Upgradeable(acceptedToken);
+        return token.balanceOf(msg.sender) < price * num;
+    }
+
+    function safeMint_mul(
+        address to,
+        string memory uri,
+        uint256 num
+    ) public onlyOwner {
+        IERC20Upgradeable token = IERC20Upgradeable(acceptedToken);
+        require(
+            !(token.balanceOf(msg.sender) < price * num),
+            "Not Enough Balance"
+        );
+        require(
+            token.transferFrom(msg.sender, address(this), price * num),
+            "TLN : transferFailed"
+        );
+
+        for (uint256 i = 0; i < num; i++) {
+            uint256 tokenId = _tokenIdCounter.current();
+            _tokenIdCounter.increment();
+            _safeMint(to, tokenId);
+            _setTokenURI(tokenId, uri);
+        }
+    }
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId,
+        uint256 batchSize
+    )
         internal
-        whenNotPaused
         override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+        whenNotPaused
     {
         super._beforeTokenTransfer(from, to, tokenId, batchSize);
     }
 
     // The following functions are overrides required by Solidity.
 
-    function _burn(uint256 tokenId)
-        internal
-        override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
-    {
+    function _burn(
+        uint256 tokenId
+    ) internal override(ERC721Upgradeable, ERC721URIStorageUpgradeable) {
         super._burn(tokenId);
     }
 
-    function tokenURI(uint256 tokenId)
+    function tokenURI(
+        uint256 tokenId
+    )
         public
         view
         override(ERC721Upgradeable, ERC721URIStorageUpgradeable)
@@ -78,7 +127,9 @@ contract TomaasLPN is
         return super.tokenURI(tokenId);
     }
 
-    function supportsInterface(bytes4 interfaceId)
+    function supportsInterface(
+        bytes4 interfaceId
+    )
         public
         view
         override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
