@@ -26,6 +26,8 @@ contract TomaasLPN is
     CountersUpgradeable.Counter private _tokenIdCounter;
     IERC20Upgradeable private acceptedToken;
 
+    mapping(address => bool) whitelist;
+    mapping(uint256 => uint256) tokenBalOfNFT;
     uint256 price;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -62,19 +64,19 @@ contract TomaasLPN is
     // }
 
     function safeMint_mul(address to, string memory uri, uint256 num) public {
-        IERC20Upgradeable token = IERC20Upgradeable(acceptedToken);
         require(
-            !(token.balanceOf(msg.sender) < price * num),
+            !(acceptedToken.balanceOf(msg.sender) < price * num),
             "Not Enough Balance"
         );
         require(
-            token.transferFrom(msg.sender, address(this), price * num),
+            acceptedToken.transferFrom(msg.sender, address(this), price * num),
             "TLN : transferFailed"
         );
 
         for (uint256 i = 0; i < num; i++) {
             uint256 tokenId = _tokenIdCounter.current();
             _tokenIdCounter.increment();
+            tokenBalOfNFT[tokenId] = price;
             _safeMint(to, tokenId);
             _setTokenURI(tokenId, uri);
         }
@@ -121,5 +123,36 @@ contract TomaasLPN is
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
+    }
+
+    function addToWL(address _address) public onlyOwner {
+        whitelist[_address] = true;
+    }
+
+    function rmFromWL(address _address) public onlyOwner {
+        whitelist[_address] = false;
+    }
+
+    function isWL(address _address) public view returns (bool) {
+        return whitelist[_address];
+    }
+
+    function withdrawToken(uint256 _tokenId) public {
+        require(ownerOf(_tokenId) == msg.sender, "You are not owner");
+        require(whitelist[msg.sender], "You do not have permission");
+        require(
+            acceptedToken.balanceOf(address(this)) >= price,
+            "Contract Does not have enough token"
+        );
+        require(
+            acceptedToken.transfer(msg.sender, tokenBalOfNFT[_tokenId]),
+            "Token Transfer Failed"
+        );
+        require(tokenBalOfNFT[_tokenId] != 0, "Token has 0 token.");
+        tokenBalOfNFT[_tokenId] = 0;
+    }
+
+    function getTokenBalOfNFT(uint256 _tokenId) public view returns (uint256) {
+        return tokenBalOfNFT[_tokenId];
     }
 }
