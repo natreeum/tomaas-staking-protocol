@@ -26,6 +26,8 @@ contract TomaasLPN is
     CountersUpgradeable.Counter private _tokenIdCounter;
     IERC20Upgradeable private acceptedToken;
 
+    // uint256[] public tokenIds;
+
     mapping(address => bool) whitelist;
     mapping(uint256 => uint256) tokenBalOfNFT;
     uint256 price;
@@ -150,6 +152,32 @@ contract TomaasLPN is
         );
         require(tokenBalOfNFT[_tokenId] != 0, "Token has 0 token.");
         tokenBalOfNFT[_tokenId] = 0;
+    }
+
+    function withdrawTokenMul(uint256[] memory _tokenIds) public {
+        require(whitelist[msg.sender], "Not whitelisted");
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            require(
+                ownerOf(_tokenIds[i]) == msg.sender,
+                "You entered a tokenId that is not yours"
+            );
+            require(tokenBalOfNFT[_tokenIds[i]] > 0, "token has no balance");
+        }
+        uint256 withdrawVal = 0;
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            withdrawVal += tokenBalOfNFT[_tokenIds[i]];
+        }
+        require(
+            acceptedToken.balanceOf(address(this)) >= withdrawVal,
+            "Contract Does not have enough token"
+        );
+        require(
+            acceptedToken.transfer(msg.sender, withdrawVal),
+            "Token Transfer Failed"
+        );
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            tokenBalOfNFT[_tokenIds[i]] = 0;
+        }
     }
 
     function getTokenBalOfNFT(uint256 _tokenId) public view returns (uint256) {
