@@ -9,15 +9,18 @@ describe("TomaaS Staking Pool", () => {
     let clientAddress;
     
     const nullAddress = "0x0000000000000000000000000000000000000000";
-    const UsdcAddress = process.env.USDC_ETH_ADDRESS;
     const USDC_UNIT = ethers.utils.parseUnits("1000", 6).mul(1000000);
+    const RWN_TOKEN_NAME = "Trustless Ondemand Mobility Vehicle Ownership pre #1";
 
     let lpnContract;
     let rwnContract;
     let erc20MockContract;
     let stakingPoolContract;
+    let protocolContract;
+    let marketplaceContract;
 
     const tokenUri = "https://ipfs.io/ipfs/Qm...";
+    const NFT_URI = "https://www.tomaas.ai/nft";
 
     before("deploy associated contracts", async () => {
         const [deployerSigner, clientSigner] = await ethers.getSigners();
@@ -48,13 +51,34 @@ describe("TomaaS Staking Pool", () => {
         await lpnContract.deployed();
         console.log(`Address of LPN Contract: ${lpnContract.address}`);
 
+        // RWN Contract
+        const rwnContractFactory = await ethers.getContractFactory("TomaasRWN");
+        rwnContract = await upgrades.deployProxy(rwnContractFactory, [
+            RWN_TOKEN_NAME,
+            erc20MockContract.address
+        ]);
+        await rwnContract.deployed();
+        console.log(`Address of RWN Contract: ${rwnContract.address}`);
+
+        // Protocol Contract
+        const protocolContractFactory = await ethers.getContractFactory("TomaasProtocol");
+        protocolContract = await upgrades.deployProxy(protocolContractFactory);
+        await protocolContract.deployed();
+
+        // MarketPlace Contract
+        const marketplaceContractFactory = await ethers.getContractFactory("TomaasMarketplace");
+        marketplaceContract = await upgrades.deployProxy(marketplaceContractFactory, [protocolContract.address]);
+        await marketplaceContract.deployed();
     });
 
     it("deploy and initialize tomaas-staking-pool-contract", async () => {
+        const [deployerSigner, clientSigner] = await ethers.getSigners();
+
         const stakingPoolContractFactory = await ethers.getContractFactory("TomaasStakingPool");
         stakingPoolContract = await upgrades.deployProxy(stakingPoolContractFactory, [
             lpnContract.address, 
-            erc20MockContract.address
+            erc20MockContract.address,
+            marketplaceContract.address
         ], {
             initializer: "initialize",
         });
@@ -65,6 +89,12 @@ describe("TomaaS Staking Pool", () => {
         await stakingPoolContract.initStaking();
         await stakingPoolContract.setRewardsClaimable(true);
         console.log("StakingSystemContract is initialized");
+
+        // WL to lpContract.
+        await lpnContract.connect(deployerSigner).addToWL(stakingPoolContract.address);
+
+        const isWhiteList = await lpnContract.isWL(stakingPoolContract.address);
+        console.log("is WhiteList : " + isWhiteList);
     });
 
     it("set approval and mint nfts", async () => {
@@ -223,4 +253,77 @@ describe("TomaaS Staking Pool", () => {
         console.log(`the owner of token id 5: ${ownerOfToken5}`);
 
     });
+
+    it("mint RWNs", async () => {
+        const [deployerSigner, clientSigner, rwnClientSigner] = await ethers.getSigners();
+
+        for (let i = 0; i < 10; i++) {
+            (await rwnContract.connect(deployerSigner).safeMint(rwnClientSigner.address, NFT_URI)).wait();
+        }
+
+        expect(
+            await rwnContract.ownerOf(9) == rwnClientSigner.address
+        );
+        console.log(`balance of rwnClient : ${await rwnContract.balanceOf(rwnClientSigner.address)}`);
+    });
+
+    it("listing RWNs to MarketPlace Contract", async () => {
+        const [deployerSigner, clientSigner, rwnClientSigner] = await ethers.getSigners();
+
+        let TOKEN_ID = 0;
+
+        const addedCollectionCount = await protocolContract.connect(deployerSigner).addCollection(rwnContract.address);
+
+        // const price = ONE_USDC.mul(300);
+        await marketplaceContract.connect(rwnClientSigner).listingForSale(rwnContract.address, TOKEN_ID, 300);
+
+        await marketplaceContract.isForSale(rwnContract.address,TOKEN_ID);
+    });
+
+    it("get listed RWNs to MarketPlace Contract", async () => {
+        const [deployerSigner, clientSigner, rwnClientSigner] = await ethers.getSigners();
+
+        const listedNFTs = await marketplaceContract.getListedNFTs(rwnContract.address);
+
+        console.log(`rwnClientAddress is ${rwnClientSigner.address}`);
+        console.log(listedNFTs[0][0]);
+    });
+
+    it("mint TLNs", async () => {
+        const [deployerSigner, tlnClientSigner, rwnClientSigner] = await ethers.getSigners();
+
+        await erc20MockContract.connect(deployerSigner).mint(deployerAddress, USDC_UNIT);
+
+        await expect(
+            lpnContract.setApprovalForAll(stakingPoolContract.address, true)
+        )
+            .to.emit(lpnContract, "ApprovalForAll")
+            .withArgs(deployerAddress, stakingPoolContract.address, true);
+
+        await lpnContract.safeMint_mul(tlnClientSigner.address, tokenUri, 6);
+    });
+
+    it("stake TLNs", async () => {
+        const [deployerSigner, tlnClientSigner, rwnClientSigner] = await ethers.getSigners();
+
+        console.log(`[Before Stake]balance of Staking Pool : ${await erc20MockContract.balanceOf(stakingPoolContract.address)}`);
+
+        await expect(
+            lpnContract.connect(tlnClientSigner).setApprovalForAll(
+                stakingPoolContract.address,
+                true
+            )
+        )
+            .to.emit(lpnContract, "ApprovalForAll")
+            .withArgs(tlnClientSigner.address, stakingPoolContract.address, true);
+
+        // stake
+        await expect(stakingPoolContract.connect(tlnClientSigner).stakeToken(10))
+            .to.emit(stakingPoolContract, "Staked")
+            .withArgs(tlnClientSigner.address, 10);
+        console.log(`token id 10 is staked!`);
+
+        console.log(`[After Stake] balance of Staking Pool : ${await erc20MockContract.balanceOf(stakingPoolContract.address)}`);
+    });
+
 });

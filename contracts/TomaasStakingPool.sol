@@ -9,6 +9,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC721/utils/ERC721HolderUpgra
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "./TomaasLPN.sol";
 import "./TomaasRWN.sol";
+import "./TomaasMarketplace.sol";
 
 import "hardhat/console.sol";
 
@@ -26,6 +27,7 @@ contract TomaasStakingPool is
     // IERC721Upgradeable public liquidityProviderNft;
     TomaasLPN public liquidityProviderNft;
     TomaasRWN public realWorldNft;
+    TomaasMarketplace public marketplace;
 
     // [ Data of Staking Pool Contract ]
     bool public rewardsClaimable;
@@ -70,10 +72,11 @@ contract TomaasStakingPool is
     event EmergencyUnstake(address indexed user, uint256 tokenId);
 
     // function initialize() initializer public {
-    function initialize(TomaasLPN _liquidityProviderNft, ITokenForRewards _tokenForRewards) initializer public {
+    function initialize(TomaasLPN _liquidityProviderNft, ITokenForRewards _tokenForRewards, TomaasMarketplace _marketplace) initializer public {
         __Ownable_init();
         tokenForRewards = _tokenForRewards;
         liquidityProviderNft = _liquidityProviderNft;
+        marketplace = _marketplace;
     }
 
     function initStaking() public onlyOwner {
@@ -133,8 +136,12 @@ contract TomaasStakingPool is
         liquidityProviderNft.approve(address(this), _tokenId);
         liquidityProviderNft.safeTransferFrom(_userAddress, address(this), _tokenId);
 
+        // get erc20 from staked nft
+        liquidityProviderNft.withdrawToken(_tokenId);
+        
         emit Staked(_userAddress, _tokenId);
         stakedTotal++;
+
     }
 
     function unstakeToken(uint256 _tokenId) public {
