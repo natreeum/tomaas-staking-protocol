@@ -11,7 +11,12 @@ import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
-/// @custom:security-contact security@tomaas.ai
+/**
+ * @title Tomaas Liquidity Provider NFT
+ * @author tomaas labs
+ * @notice 
+ * @custom:security-contact security@tomaas.ai
+ */
 contract TomaasLPN is
     Initializable,
     ERC721Upgradeable,
@@ -65,7 +70,13 @@ contract TomaasLPN is
     //     _setTokenURI(tokenId, uri);
     // }
 
-    function safeMint_mul(address to, string memory uri, uint256 num) public {
+    /**
+     * safe multiple mint 
+     * @param to destination address
+     * @param uri token uri
+     * @param num number of tokens to mint 
+     */ 
+    function safeMintMultiple(address to, string memory uri, uint64 num) public {
         require(
             !(acceptedToken.balanceOf(msg.sender) < price * num),
             "Not Enough Balance"
@@ -75,8 +86,10 @@ contract TomaasLPN is
             "TLN : transferFailed"
         );
 
-        for (uint256 i = 0; i < num; i++) {
-            uint256 tokenId = _tokenIdCounter.current();
+        uint256 tokenId;
+
+        for (uint64 i = 0; i < num; i++) {
+            tokenId = _tokenIdCounter.current();
             _tokenIdCounter.increment();
             tokenBalOfNFT[tokenId] = price;
             _safeMint(to, tokenId);
@@ -105,6 +118,10 @@ contract TomaasLPN is
         super._burn(tokenId);
     }
 
+    /**
+     * @dev See {IERC721Metadata-tokenURI}. 
+     * @param tokenId token id
+     */
     function tokenURI(
         uint256 tokenId
     )
@@ -127,19 +144,35 @@ contract TomaasLPN is
         return super.supportsInterface(interfaceId);
     }
 
+    /**
+     * @dev add address to whitelist 
+     * @param _address address to add to whitelist
+     */
     function addToWL(address _address) public onlyOwner {
         whitelist[_address] = true;
     }
 
+    /**
+     * @dev remove address from whitelist
+     * @param _address address to remove from whitelist
+     */
     function rmFromWL(address _address) public onlyOwner {
         whitelist[_address] = false;
     }
 
+    /**
+     * @dev check if address is in whitelist    
+     * @param _address address to check
+     */
     function isWL(address _address) public view returns (bool) {
         return whitelist[_address];
     }
 
-    function withdrawToken(uint256 _tokenId) public {
+    /**
+     * @dev WITHDRAW can only be done by whitelisted protocols. 
+     * @param _tokenId token id
+     */
+    function withdraw(uint256 _tokenId) nonReentrant public {
         require(ownerOf(_tokenId) == msg.sender, "You are not owner");
         require(whitelist[msg.sender], "You do not have permission");
         require(
@@ -154,7 +187,11 @@ contract TomaasLPN is
         tokenBalOfNFT[_tokenId] = 0;
     }
 
-    function withdrawTokenMul(uint256[] memory _tokenIds) public {
+    /**
+     * @dev WITHDRAW can only be done by whitelisted protocols. 
+     * @param _tokenIds array of token ids
+     */
+    function withdrawMultiple(uint256[] memory _tokenIds) public {
         require(whitelist[msg.sender], "Not whitelisted");
         for (uint256 i = 0; i < _tokenIds.length; i++) {
             require(

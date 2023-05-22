@@ -69,7 +69,7 @@ describe("TomaasLPN", function () {
           tomaasLPN.address,
           ethers.utils.parseUnits("100", 6).mul(1000000)
         );
-      await tomaasLPN.connect(addr1).safeMint_mul(addr1.address, tokenURI, 1);
+      await tomaasLPN.connect(addr1).safeMintMultiple(addr1.address, tokenURI, 1);
       const Addr1Bal = await usdc.balanceOf(addr1.address);
       const ContractBal = await usdc.balanceOf(tomaasLPN.address);
       expect(await tomaasLPN.balanceOf(addr1.address)).to.equal(1);
@@ -87,7 +87,7 @@ describe("TomaasLPN", function () {
           tomaasLPN.address,
           ethers.utils.parseUnits("500", 6).mul(1000000)
         );
-      await tomaasLPN.connect(addr1).safeMint_mul(addr1.address, tokenURI, 5);
+      await tomaasLPN.connect(addr1).safeMintMultiple(addr1.address, tokenURI, 5);
       const Addr1Bal = await usdc.balanceOf(addr1.address);
       const ContractBal = await usdc.balanceOf(tomaasLPN.address);
       expect(await tomaasLPN.balanceOf(addr1.address)).to.equal(5);
@@ -103,7 +103,7 @@ describe("TomaasLPN", function () {
     //     .connect(addr1)
     //     .approve(tomaasLPN.address, ethers.utils.parseUnits("10", 1));
     //   await expect(
-    //     tomaasLPN.connect(addr1).safeMint_mul(addr1.address, tokenURI, 1)
+    //     tomaasLPN.connect(addr1).safeMintMultiple(addr1.address, tokenURI, 1)
     //   ).to.be.revertedWith("Ownable: caller is not the owner");
     // });
   });
@@ -116,7 +116,7 @@ describe("TomaasLPN", function () {
   //           tomaasLPN.address,
   //           ethers.utils.parseUnits("100", 6).mul(1000000)
   //         );
-  //       await tomaasLPN.connect(addr1).safeMint_mul(addr1.address, tokenURI, 1);
+  //       await tomaasLPN.connect(addr1).safeMintMultiple(addr1.address, tokenURI, 1);
   //     });
   //     it("Contract USDC Balance", async () => {
   //       expect(await usdc.balanceOf(tomaasLPN.address)).to.equal(

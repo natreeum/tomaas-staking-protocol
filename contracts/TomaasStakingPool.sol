@@ -137,7 +137,7 @@ contract TomaasStakingPool is
         liquidityProviderNft.safeTransferFrom(_userAddress, address(this), _tokenId);
 
         // get erc20 from staked nft
-        liquidityProviderNft.withdrawToken(_tokenId);
+        liquidityProviderNft.withdraw(_tokenId);
         
         emit Staked(_userAddress, _tokenId);
         stakedTotal++;
