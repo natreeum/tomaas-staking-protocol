@@ -32,7 +32,7 @@ describe("TomaasRWN", function () {
         await usdc.connect(owner).mint(renter.address, TWO_USDC.mul(1000000));
 
         TomaasRWN = await ethers.getContractFactory("TomaasRWN");
-        tomaasRWN = await upgrades.deployProxy(TomaasRWN, [TOKEN_NAME, usdc.address]);
+        tomaasRWN = await upgrades.deployProxy(TomaasRWN, [TOKEN_NAME, usdc.address, 1647542400, 4, 1000]);
         await tomaasRWN.deployed();
     });
 
@@ -48,6 +48,30 @@ describe("TomaasRWN", function () {
 
             const tokenURIStored = await tomaasRWN.tokenURI(TOKEN_ID);
             expect(tokenURIStored).to.equal(NFT_URI);
+        });
+    });
+
+    describe("minting multiple tokens", function() {
+        it("should mint the correct number of tokens", async function() {
+            const initialSupply = await tomaasRWN.totalSupply();
+
+            // Mint multiple tokens
+            await tomaasRWN.connect(owner).safeMintMultiple(holder.address, NFT_URI, 5);
+
+            // Check the total supply increased by the correct amount
+            expect(await tomaasRWN.totalSupply()).to.equal(initialSupply + 5);
+        });
+
+        it("should assign ownership of the minted tokens to the correct address", async function() {
+            // Mint multiple tokens
+            await tomaasRWN.connect(owner).safeMintMultiple(holder.address, NFT_URI, 5);
+
+            // Check the last 5 tokens are owned by addr1
+            const totalSupply = await tomaasRWN.totalSupply();
+
+            for (let i = totalSupply - 5; i < totalSupply; i++) {
+                expect(await tomaasRWN.ownerOf(i)).to.equal(holder.address);
+            }
         });
     });
 

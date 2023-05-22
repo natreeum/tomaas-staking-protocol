@@ -18,7 +18,7 @@ import "hardhat/console.sol";
  * contract provides a comprehensive implementation of an NFT rental protocol, 
  * with functions for managing user and expiry timestamps, 
  * collecting rental fees, and distributing earnings to NFT owners.
- * @title TomaasRWN
+ * @title Tomaas Real World Asset NFT
  * @dev Implementation of the TomaasRWN
  * @custom:security-contact security@tomaas.ai
  */
@@ -40,28 +40,47 @@ contract TomaasRWN is
         uint64 expires; // unix timestamp, user expires
     }
 
+    //info of real world asset
+    struct AssetInfo {
+        uint64 svcStartDate; // unix timestamp, service start date of asset, start depreciation from this date
+        uint64 usefulLife; // useful life of asset in years
+        uint256 price; // price of asset
+    }
+
     mapping(uint256 => UserInfo) internal _users;
 
     IERC20Upgradeable private _acceptedToken;
 
-    uint256 feeRate;
+    uint256 _feeRate;
+
+    AssetInfo _assetInfo;
 
     //token id => earnings
     mapping(uint256 => uint256) internal _unclaimedEarnings;
     uint256 internal _totalDistributedEarnings;
+
+    event NewTRN(string name, address acceptedToken, uint64 svcStartDate, uint64 usefulLife, uint64 price);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(string memory _name, address acceptedToken) initializer public {
-        feeRate = 100; // 1% fee, 100% = 10000
+    function initialize(string memory _name, address acceptedToken, uint64 svcStartDate, uint64 usefulLife, uint64 price
+    ) initializer public {
+        _feeRate = 100; // 1% fee, 100% = 10000
         _acceptedToken = IERC20Upgradeable(acceptedToken);
+        _assetInfo.svcStartDate = svcStartDate;
+        _assetInfo.usefulLife = usefulLife;
+        _assetInfo.price = price;
+
         __ERC721_init(_name, "TRN");
         __ERC721URIStorage_init();
         __Pausable_init();
         __Ownable_init();
+        __ReentrancyGuard_init();
+
+        emit NewTRN(_name, acceptedToken, svcStartDate, usefulLife, price);
     }
 
     function pause() public onlyOwner {
@@ -77,6 +96,23 @@ contract TomaasRWN is
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, uri);
+    }
+
+    /**
+     * @dev mint multiple tokens 
+     * @param to address of user
+     * @param uri  token uri
+     * @param number number of tokens to mint
+     */
+    function safeMintMultiple(address to, string memory uri, uint64 number) public onlyOwner {
+        uint256 tokenId;
+
+        for (uint256 i = 0; i < number; i++) {
+            tokenId = _tokenIdCounter.current();
+            _tokenIdCounter.increment();
+            _safeMint(to, tokenId);
+            _setTokenURI(tokenId, uri);
+        }
     }
 
     /**
@@ -176,11 +212,11 @@ contract TomaasRWN is
     }
 
     function setFeeRate(uint256 rate) external onlyOwner {
-        feeRate = rate;
+        _feeRate = rate;
     }
 
     function getFeeRate() external view returns (uint256) {
-        return feeRate;
+        return _feeRate;
     }
 
     function _distributeEarning(address user, uint256 amount) internal {
@@ -229,7 +265,7 @@ contract TomaasRWN is
         uint256 amount = _unclaimedEarnings[tokenId];
         require(amount > 0, "RWN: noEarningsToClaim");
 
-        uint256 fee = amount * feeRate / 10000;
+        uint256 fee = amount * _feeRate / 10000;
         uint256 amountToUser = amount - fee;
 
         IERC20Upgradeable token = IERC20Upgradeable(_acceptedToken);
@@ -250,7 +286,7 @@ contract TomaasRWN is
         }
 
         require(amount > 0, "RWN: noEarningsToClaim");
-        uint256 fee = amount * feeRate / 10000;
+        uint256 fee = amount * _feeRate / 10000;
         uint256 amountToUser = amount - fee;
 
         IERC20Upgradeable token = IERC20Upgradeable(_acceptedToken);

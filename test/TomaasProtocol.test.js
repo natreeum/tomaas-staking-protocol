@@ -39,7 +39,7 @@ describe("TomaasProtocol", function () {
 
         // Deploy TomaasRWN
         const TomaasRWN = await ethers.getContractFactory("TomaasRWN");
-        tomaasRWN = await upgrades.deployProxy(TomaasRWN, [COLLECTION_NAME_1, usdc.address]);
+        tomaasRWN = await upgrades.deployProxy(TomaasRWN, [COLLECTION_NAME_1, usdc.address, 1647542400, 4, 1000]);
         await tomaasRWN.deployed();
 
         const TomaasProtocol = await ethers.getContractFactory("TomaasProtocol");
@@ -54,7 +54,7 @@ describe("TomaasProtocol", function () {
         it("should add a new collection", async function () {
           // Test case code
           const TomaasRWN = await ethers.getContractFactory("TomaasRWN");
-          const tomNFT2 = await upgrades.deployProxy(TomaasRWN, [COLLECTION_NAME_2, usdc.address]);
+          const tomNFT2 = await upgrades.deployProxy(TomaasRWN, [COLLECTION_NAME_2, usdc.address, 1647542400, 4, 1000]);
           await tomNFT2.deployed();
 
           const tx = await tomaasProtocol.addCollection(tomNFT2.address);
