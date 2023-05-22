@@ -115,7 +115,7 @@ describe("TomaaS Staking Pool", () => {
             .to.emit(lpnContract, "ApprovalForAll")
             .withArgs(deployerAddress, stakingPoolContract.address, true);
 
-        await lpnContract.safeMint_mul(clientAddress, tokenUri, 6);
+        await lpnContract.safeMintMultiple(clientAddress, tokenUri, 6);
     });
 
     it("stake a nft", async () => {
@@ -303,7 +303,7 @@ describe("TomaaS Staking Pool", () => {
             .to.emit(lpnContract, "ApprovalForAll")
             .withArgs(deployerAddress, stakingPoolContract.address, true);
 
-        await lpnContract.safeMint_mul(tlnClientSigner.address, tokenUri, 6);
+        await lpnContract.safeMintMultiple(tlnClientSigner.address, tokenUri, 6);
     });
 
     it("stake TLNs", async () => {

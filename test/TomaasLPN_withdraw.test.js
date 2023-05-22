@@ -28,7 +28,7 @@ describe("Withdraw", () => {
         tomaasLPN.address,
         ethers.utils.parseUnits("100", 6).mul(1000000)
       );
-    await tomaasLPN.connect(addr1).safeMint_mul(addr1.address, tokenURI, 1);
+    await tomaasLPN.connect(addr1).safeMintMultiple(addr1.address, tokenURI, 1);
   });
 
   it("Contract USDC Balance is 100", async () => {
@@ -53,7 +53,7 @@ describe("Withdraw", () => {
   });
 
   it("addr1(POOL CONTRACT) withdraws tokens of NFT:id(0) from contract", async () => {
-    await tomaasLPN.connect(addr1).withdrawToken(0);
+    await tomaasLPN.connect(addr1).withdraw(0);
     expect(await usdc.balanceOf(addr1.address)).to.equal(
       ethers.utils.parseUnits("1000", 6).mul(1000000)
     );
@@ -72,9 +72,9 @@ describe("Withdraw", () => {
         tomaasLPN.address,
         ethers.utils.parseUnits("500", 6).mul(1000000)
       );
-    await tomaasLPN.connect(addr1).safeMint_mul(addr1.address, tokenURI, 5);
+    await tomaasLPN.connect(addr1).safeMintMultiple(addr1.address, tokenURI, 5);
 
-    await tomaasLPN.connect(addr1).withdrawTokenMul([1, 2, 3, 4]);
+    await tomaasLPN.connect(addr1).withdrawMultiple([1, 2, 3, 4]);
     expect(await usdc.balanceOf(addr1.address)).to.equal(
       ethers.utils.parseUnits("900", 6).mul(1000000)
     );
@@ -82,9 +82,7 @@ describe("Withdraw", () => {
 
   it("should failed because token has not enough balance", async () => {
     await tomaasLPN.connect(owner).addToWL(addr1.address);
-    expect(
-      await tomaasLPN.connect(addr1).withdrawTokenMul([1])
-    ).to.be.revertedWith("token has no balance");
+    await expect(tomaasLPN.connect(addr1).withdrawMultiple([1])).to.be.revertedWith("token has no balance");
   });
 
   it("should failed not owner", async () => {
@@ -100,9 +98,7 @@ describe("Withdraw", () => {
         tomaasLPN.address,
         ethers.utils.parseUnits("200", 6).mul(1000000)
       );
-    await tomaasLPN.connect(addr2).safeMint_mul(addr2.address, "", 2);
-    expect(
-      await tomaasLPN.connect(addr1).withdrawTokenMul([6, 7])
-    ).to.be.revertedWith("You entered a tokenId that is not yours");
+    await tomaasLPN.connect(addr2).safeMintMultiple(addr2.address, "", 2);
+    await expect(tomaasLPN.connect(addr1).withdrawMultiple([6, 7])).to.be.revertedWith("You entered a tokenId that is not yours");
   });
 });
