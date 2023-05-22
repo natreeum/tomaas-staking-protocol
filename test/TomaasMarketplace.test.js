@@ -37,7 +37,7 @@ describe("TomaasMarketplace", function () {
 
     // Deploy TomaasRWN
     const TomaasRWN = await ethers.getContractFactory("TomaasRWN");
-    tomaasRWN = await upgrades.deployProxy(TomaasRWN, [COLLECTION_NAME_1, usdc.address]); 
+    tomaasRWN = await upgrades.deployProxy(TomaasRWN, [COLLECTION_NAME_1, usdc.address, 1647542400, 4, 1000]); 
     await tomaasRWN.deployed();
 
     const TomaasProtocol = await ethers.getContractFactory("TomaasProtocol");

@@ -55,7 +55,10 @@ describe("TomaaS Staking Pool", () => {
         const rwnContractFactory = await ethers.getContractFactory("TomaasRWN");
         rwnContract = await upgrades.deployProxy(rwnContractFactory, [
             RWN_TOKEN_NAME,
-            erc20MockContract.address
+            erc20MockContract.address,
+            1647542400, 
+            4,
+            1000
         ]);
         await rwnContract.deployed();
         console.log(`Address of RWN Contract: ${rwnContract.address}`);
