@@ -6,6 +6,8 @@ typechain
 typechain-types
 arweave-keyfile.json
 package-lock.json
+.DS_Store
+yarn.lock
 
 # Hardhat files
 cache

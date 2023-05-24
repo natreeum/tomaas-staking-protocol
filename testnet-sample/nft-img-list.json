@@ -1,5 +1,8 @@
 [
-  { "collectionImg" : "https://arweave.net/t0i_Cg4lFTz7_AsIRAiqOEQJJe80KwW26J3-07dsSKE" },
-  { "collectionImg" : "https://arweave.net/RQ0EH3jaLsc8_1ViENDM7j7dfSJ6o3ImRuqSznZKsL4" },
-  { "collectionImg" : "https://arweave.net/MnWYm0a8AsKZ6PyBXlmfxoK2LvB34VY_vWzqQp4C_2s" }
+  { "trn-test-img" : "https://arweave.net/t0i_Cg4lFTz7_AsIRAiqOEQJJe80KwW26J3-07dsSKE" },
+  { "trn-test-2-img" : "https://arweave.net/MnWYm0a8AsKZ6PyBXlmfxoK2LvB34VY_vWzqQp4C_2s" },
+  { "trn-max-img" : "https://arweave.net/RQ0EH3jaLsc8_1ViENDM7j7dfSJ6o3ImRuqSznZKsL4" },
+  { "trn-maxplus-img" : "https://arweave.net/tBvPHmkHi1jqvD96lETTmhTzVxXWA4-BPOWbSB6xtl0" },
+  { "trn-maxpro-img" : "https://arweave.net/iGP6iIpuWGgPqeZi7I9Lu2NKiHx6C-SD1jamCiS2Kuk" },
+  { "tln-img" : "https://arweave.net/BC5Tns2oKquL4O7pcIXJb396G1AkFUynJJV11vcbIgo"}
 ]
