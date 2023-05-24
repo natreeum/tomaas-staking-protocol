@@ -26,10 +26,6 @@ async function main() {
   await usdc.deployed();
   console.log("USDC address:", usdc.address);
 
-  const TomaasRWN = await hre.ethers.getContractFactory("TomaasRWN");
-
-  const COLLECTION_NAME_1 = "Tomaas Real World Asset NFT MAX #1";
-
   const MAX_SSD = new Date("2020.5.10").getTime();
   const MAX_USEFUL_LIFE = 4;
   const MAX_PRICE = 660;
@@ -42,6 +38,10 @@ async function main() {
   const MAXPLUS_USEFUL_LIFE = 4;
   const MAXPLUS_PRICE = 880;
 
+  const TomaasRWN = await hre.ethers.getContractFactory("TomaasRWN");
+
+  const COLLECTION_NAME_1 = "TRN MAX #1";
+
   const TRN_MAX_1 = await upgrades.deployProxy(TomaasRWN, 
                               [ COLLECTION_NAME_1, 
                                 usdc.address, 
@@ -51,7 +51,7 @@ async function main() {
   await TRN_MAX_1.deployed();
   console.log("TRN MAX #1 address:", TRN_MAX_1.address);
 
-  const COLLECTION_NAME_2 = "Tomaas Real World Asset NFT MAX Pro #1";
+  const COLLECTION_NAME_2 = "TRN MAX Pro #1";
   const TRN_MAXPro_1 = await upgrades.deployProxy(TomaasRWN, 
                               [ COLLECTION_NAME_2, 
                                 usdc.address,
@@ -61,7 +61,7 @@ async function main() {
   await TRN_MAXPro_1.deployed();
   console.log("TRN MAX Pro #1 address:", TRN_MAXPro_1.address);
 
-  const COLLECTION_NAME_3 = "Tomaas Real World Asset NFT MAX Plus #1";
+  const COLLECTION_NAME_3 = "TRN MAX Plus #1";
   const TRN_MAXPlus_1 = await upgrades.deployProxy(TomaasRWN, 
                               [ COLLECTION_NAME_3, 
                                 usdc.address,
